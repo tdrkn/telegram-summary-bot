@@ -48,7 +48,6 @@ export default {
 					return new Response('ok');
 				}
 				switch (bot.update_type) {
-
 					case 'message': {
 						const groupId = bot.update.message?.chat.id;
 						const messageText = bot.update.message?.text || "";
@@ -64,11 +63,11 @@ export default {
 						}
 
 						if (bot.update.message?.text?.startsWith('/summary')) {
-							const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 400')
+							const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 2000')
 								.bind(groupId)
 								.all();
 							const result = await model.generateContent(
-								`summarize following text:
+								`概括下面的对话：:
 ${results.map((r: any) => r.content).join('\n')}
 `
 							);
