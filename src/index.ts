@@ -1,64 +1,79 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.toml`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-import { GoogleGenerativeAI, GenerativeModel, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
-
 import TelegramBot, { TelegramExecutionContext } from '@codebam/cf-workers-telegram-bot';
 
+export interface Environment {
+	SECRET_TELEGRAM_API_TOKEN: string;
+}
 
-const SAFETY = [
-	{
-		category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-		threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-	},
-	{
-		category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-		threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-	},
-	{
-		category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-		threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-	},
-	{
-		category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-		threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-	},
-];
+type promiseFunc<T> = (resolve: (result: T) => void, reject: (e?: Error) => void) => Promise<T>;
+
+/**
+ * Wrap setTimeout in a Promise
+ * @param func - function to call after setTimeout
+ */
+function wrapPromise<T>(func: promiseFunc<T>, time = 1000) {
+	return new Promise((resolve, reject) => {
+		return setTimeout(() => {
+			func(resolve, reject).catch((e: unknown) => {
+				console.log(e);
+			});
+		}, time);
+	});
+}
+
 
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN);
-		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-		const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", safetySettings: SAFETY });
+	fetch: async (request: Request, env: Environment, ctx: ExecutionContext) => {
+		const tuxrobot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
+		await Promise.all([
+			tuxrobot
+				.on('epoch', async (bot: TelegramExecutionContext) => {
+					switch (bot.update_type) {
+						case 'message':
+							await bot.reply(Math.floor(Date.now() / 1000).toString());
+							break;
 
-		const prompt = "Write a story about a magic backpack.";
-		const result = await model.generateContent(prompt);
-		await bot
-			.on('start', async function (context: TelegramExecutionContext) {
-				await context.reply('Hello, I am a bot that can generate stories. Please send me a prompt.');
-				switch (context.update_type) {
-					case 'message':
-						await context.reply(
-						"114514"
-						//	result.response.text()
-						);
-						break;
+						default:
+							break;
+					}
+					return new Response('ok');
+				})
+				.on('start', async (bot: TelegramExecutionContext) => {
+					switch (bot.update_type) {
+						case 'message':
+							await bot.reply(
+								'Send me a message to talk to llama3. Use /clear to wipe history. Use /photo to generate a photo. Use /code to generate code.',
+							);
+							break;
 
-					default:
-						break;
-				}
-				return new Response('ok');
-			})
-			.handle(request.clone());
-		return new Response('Hello World!');
+						default:
+							break;
+					}
+					return new Response('ok');
+				})
+				.on('code', async (bot: TelegramExecutionContext) => {
+					switch (bot.update_type) {
+						case 'message': {
+							await bot.reply('```js\nconsole.log("hello world");\n```');
+							break;
+						}
+						default:
+							break;
+					}
+					return new Response('ok');
+				})
+				.on(':message', async (bot: TelegramExecutionContext) => {
+					switch (bot.update_type) {
+						case 'message': {
+							await bot.reply(`hihihi`);
+							return new Response('ok');
+						};
+						default:
+							break;
+					}
+					return new Response('ok');
+				})
+				.handle(request.clone()),
+		]);
+		return new Response('ok');
 	},
 };
