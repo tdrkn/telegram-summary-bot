@@ -17,6 +17,10 @@
     "wrangler": "^3.60.3"
   },
   "dependencies": {
+    "@codebam/cf-workers-telegram-bot": "^7.27.0",
     "@google/generative-ai": "^0.21.0"
+  },
+  "overrides": {
+    "is-core-module": "npm:@nolyfill/is-core-module@^1"
   }
 }

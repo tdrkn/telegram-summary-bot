@@ -10,97 +10,55 @@
  *
  * Learn more at https://developers.cloudflare.com/workers/
  */
+import { GoogleGenerativeAI, GenerativeModel, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
-import { CONFIG } from "./config";
-import { BotError } from "./errors";
-import { GeminiClient } from "./gemini";
-import { TelegramClient } from "./telegram";
-import { retry, validateHours } from "./util";
+import TelegramBot, { TelegramExecutionContext } from '@codebam/cf-workers-telegram-bot';
+
+
+const SAFETY = [
+	{
+		category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+		threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+	},
+	{
+		category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+		threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+	},
+	{
+		category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+		threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+	},
+	{
+		category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+		threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+	},
+];
 
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
-		if (request.method !== 'POST') {
-			return new Response('Method not allowed', { status: 405 });
-		}
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN);
+		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+		const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", safetySettings: SAFETY });
 
-		try {
-			const update: TelegramUpdate = await request.json();
+		const prompt = "Write a story about a magic backpack.";
+		const result = await model.generateContent(prompt);
+		await bot
+			.on('start', async function (context: TelegramExecutionContext) {
+				await context.reply('Hello, I am a bot that can generate stories. Please send me a prompt.');
+				switch (context.update_type) {
+					case 'message':
+						await context.reply(
+						"114514"
+						//	result.response.text()
+						);
+						break;
 
-			if (!update.message?.text?.startsWith('/summary')) {
-				return new Response('OK', { status: 200 });
-			}
-
-			const chatId = update.message.chat.id;
-			const params = update.message.text.split(' ');
-
-			if (params.length !== 2) {
-				throw new BotError(
-					'Please use format: /summary <hours>',
-					'INVALID_FORMAT'
-				);
-			}
-
-			const hours = parseInt(params[1]);
-			validateHours(hours);
-
-			const telegramClient = new TelegramClient(env.TELEGRAM_BOT_TOKEN);
-			const geminiClient = new GeminiClient(env.GEMINI_API_KEY);
-
-			// 获取历史消息
-			const messages = await retry(async () => {
-				const updates = await telegramClient.getUpdates(
-					chatId,
-					CONFIG.MAX_MESSAGES_PER_REQUEST
-				);
-
-				const endTime = Date.now();
-				const startTime = endTime - (hours * 60 * 60 * 1000);
-
-				return updates
-					.filter(update => {
-						const messageTime = update.message?.date ? update.message.date * 1000 : 0;
-						return messageTime >= startTime && messageTime <= endTime;
-					})
-					.map(update => update.message?.text)
-					.filter((text): text is string => !!text);
-			});
-
-			if (messages.length === 0) {
-				throw new BotError(
-					'No messages found in the specified time period.',
-					'NO_MESSAGES'
-				);
-			}
-
-			// 生成摘要
-			const summary = await retry(() => geminiClient.generateSummary(messages));
-
-			// 发送摘要
-			await retry(() =>
-				telegramClient.sendMessage(
-					chatId,
-					`Summary of the last ${hours} hours:\n\n${summary}`
-				)
-			);
-
-			return new Response('OK', { status: 200 });
-		} catch (error) {
-			console.error('Error:', error);
-
-			if (error instanceof BotError) {
-				const update: TelegramUpdate = await request.json();
-				const chatId = update.message?.chat.id;
-
-				if (chatId) {
-					const telegramClient = new TelegramClient(env.TELEGRAM_BOT_TOKEN);
-					await telegramClient.sendMessage(chatId, error.message);
+					default:
+						break;
 				}
-
-				return new Response(error.message, { status: error.statusCode });
-			}
-
-			return new Response('Internal server error', { status: 500 });
-		}
+				return new Response('ok');
+			})
+			.handle(request.clone());
+		return new Response('Hello World!');
 	},
-
-} satisfies ExportedHandler<Env>;
+};
