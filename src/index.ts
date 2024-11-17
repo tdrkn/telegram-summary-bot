@@ -52,11 +52,12 @@ export default {
 						const groupId = bot.update.message?.chat.id;
 						const messageText = bot.update.message?.text || "";
 						if (!bot.update.message?.text?.startsWith('/summary')) {
-							await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, content) VALUES (?, ?, ?, ?)')
+							await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, userName, content) VALUES (?, ?, ?, ?, ?)')
 								.bind(
 									crypto.randomUUID(),
 									groupId,
 									Date.now(),
+									bot.update.message?.from?.first_name || "anonymous", // not interested in user id
 									messageText
 								)
 								.run();
@@ -68,7 +69,7 @@ export default {
 								.all();
 							const result = await model.generateContent(
 								`概括下面的对话：:
-${results.map((r: any) => r.content).join('\n')}
+${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `
 							);
 							await bot.reply(result.response.text());
