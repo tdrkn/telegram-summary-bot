@@ -1,79 +1,87 @@
 import TelegramBot, { TelegramExecutionContext } from '@codebam/cf-workers-telegram-bot';
-
-export interface Environment {
-	SECRET_TELEGRAM_API_TOKEN: string;
-}
-
-type promiseFunc<T> = (resolve: (result: T) => void, reject: (e?: Error) => void) => Promise<T>;
-
-/**
- * Wrap setTimeout in a Promise
- * @param func - function to call after setTimeout
- */
-function wrapPromise<T>(func: promiseFunc<T>, time = 1000) {
-	return new Promise((resolve, reject) => {
-		return setTimeout(() => {
-			func(resolve, reject).catch((e: unknown) => {
-				console.log(e);
-			});
-		}, time);
-	});
-}
-
-
+import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai';
+const SAFETY = [
+	{
+		category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+		threshold: HarmBlockThreshold.BLOCK_NONE,
+	},
+	{
+		category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+		threshold: HarmBlockThreshold.BLOCK_NONE,
+	},
+	{
+		category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+		threshold: HarmBlockThreshold.BLOCK_NONE,
+	},
+	{
+		category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+		threshold: HarmBlockThreshold.BLOCK_NONE,
+	},
+];
 export default {
-	fetch: async (request: Request, env: Environment, ctx: ExecutionContext) => {
-		const tuxrobot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
-		await Promise.all([
-			tuxrobot
-				.on('epoch', async (bot: TelegramExecutionContext) => {
-					switch (bot.update_type) {
-						case 'message':
-							await bot.reply(Math.floor(Date.now() / 1000).toString());
-							break;
+	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
+		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
+		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+		const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b", safetySettings: SAFETY });
 
-						default:
-							break;
-					}
-					return new Response('ok');
-				})
-				.on('start', async (bot: TelegramExecutionContext) => {
-					switch (bot.update_type) {
-						case 'message':
-							await bot.reply(
-								'Send me a message to talk to llama3. Use /clear to wipe history. Use /photo to generate a photo. Use /code to generate code.',
-							);
-							break;
+		await bot
+			.on('status', async (bot: TelegramExecutionContext) => {
+				await bot.reply('我家还蛮大的');
+				return new Response('ok');
+			})
+			.on('start', async (bot: TelegramExecutionContext) => {
+				switch (bot.update_type) {
+					case 'message':
+						await bot.reply(
+							'Send me a message to talk to gemini.',
+						);
+						break;
 
-						default:
-							break;
-					}
+					default:
+						break;
+				}
+				return new Response('ok');
+			})
+			.on(':message', async (bot: TelegramExecutionContext) => {
+				if (!bot.update.message?.chat.type.includes('group')) {
+					await bot.reply('I am a bot, please add me to a group to use me.');
 					return new Response('ok');
-				})
-				.on('code', async (bot: TelegramExecutionContext) => {
-					switch (bot.update_type) {
-						case 'message': {
-							await bot.reply('```js\nconsole.log("hello world");\n```');
-							break;
+				}
+				switch (bot.update_type) {
+
+					case 'message': {
+						const groupId = bot.update.message?.chat.id;
+						const messageText = bot.update.message?.text || "";
+						if (!bot.update.message?.text?.startsWith('/summary')) {
+							await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, content) VALUES (?, ?, ?, ?)')
+								.bind(
+									crypto.randomUUID(),
+									groupId,
+									Date.now(),
+									messageText
+								)
+								.run();
 						}
-						default:
-							break;
-					}
-					return new Response('ok');
-				})
-				.on(':message', async (bot: TelegramExecutionContext) => {
-					switch (bot.update_type) {
-						case 'message': {
-							await bot.reply(`hihihi`);
+
+						if (bot.update.message?.text?.startsWith('/summary')) {
+							const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 400')
+								.bind(groupId)
+								.all();
+							const result = await model.generateContent(
+								`summarize following text:
+${results.map((r: any) => r.content).join('\n')}
+`
+							);
+							await bot.reply(result.response.text());
 							return new Response('ok');
-						};
-						default:
-							break;
-					}
-					return new Response('ok');
-				})
-				.handle(request.clone()),
-		]);
+						}
+					};
+					default:
+						break;
+				}
+				return new Response('ok');
+			})
+			.handle(request.clone());
 		return new Response('ok');
 	},
 };
