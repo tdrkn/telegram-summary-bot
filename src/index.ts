@@ -18,11 +18,66 @@ const SAFETY = [
 		threshold: HarmBlockThreshold.BLOCK_NONE,
 	},
 ];
+const account_id = "c3986c87bee332c7e11d834c69ee0742";
+const gateway_name = "telegram-summary-bot";
+
 export default {
+	async scheduled(
+		controller: ScheduledController,
+		env: Env,
+		ctx: ExecutionContext,
+	) {
+		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
+		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+		const model = genAI.getGenerativeModel(
+			{ model: "gemini-1.5-flash-8b", safetySettings: SAFETY },
+			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` }
+		);
+		const { results: groups } = await env.DB.prepare('SELECT DISTINCT groupId FROM Messages').all();
+
+		for (const group of groups) {
+			try {
+				const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 2000')
+					.bind(group.groupId)
+					.all();
+
+				if (results.length > 0) {
+					const result = await model.generateContent(
+						`概括下面的对话：
+${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
+          `
+					);
+
+					// Use fetch to send message directly to Telegram API
+					await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({
+							chat_id: group.groupId,
+							text: result.response.text()
+						}),
+					});
+
+					// Clean up old messages
+					await env.DB.prepare('DELETE FROM Messages WHERE groupId=? AND timeStamp < ?')
+						.bind(group.groupId, Date.now() - 48 * 60 * 60 * 1000)
+						.run();
+				}
+			} catch (error) {
+				console.error(`Error processing group ${group.groupId}:`, error);
+			}
+		}
+
+		console.log("cron processed");
+	},
 	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-		const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b", safetySettings: SAFETY });
+		const model = genAI.getGenerativeModel(
+			{ model: "gemini-1.5-flash-8b", safetySettings: SAFETY },
+			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` });
 
 		await bot
 			.on('status', async (bot: TelegramExecutionContext) => {
@@ -67,12 +122,14 @@ export default {
 							const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 2000')
 								.bind(groupId)
 								.all();
-							const result = await model.generateContent(
-								`概括下面的对话：:
+							if (results.length > 0) {
+								const result = await model.generateContent(
+									`概括下面的对话：:
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `
-							);
-							await bot.reply(result.response.text());
+								);
+								await bot.reply(result.response.text());
+							}
 							return new Response('ok');
 						}
 					};
