@@ -30,7 +30,7 @@ export default {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 		const model = genAI.getGenerativeModel(
-			{ model: "gemini-1.5-flash-8b", safetySettings },
+			{ model: "gemini-1.5-flash", safetySettings },
 			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` }
 		);
 		const { results: groups } = await env.DB.prepare('SELECT DISTINCT groupId FROM Messages').all();
@@ -68,7 +68,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 		const model = genAI.getGenerativeModel(
-			{ model: "gemini-1.5-flash-8b", safetySettings },
+			{ model: "gemini-1.5-flash", safetySettings },
 			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` });
 
 		await bot
