@@ -17,3 +17,9 @@ d1: telegram bot can't read info in the history, only newly sent info, so use da
 cf worker: so no more offline.(I hope so) [pricing](https://developers.cloudflare.com/workers/platform/pricing/#workers)
 
 gemini-1.5-8b: [free for limited usage and huge context](https://ai.google.dev/pricing?hl=zh-cn#1_5flash-8B)
+
+---
+
+Data will be kept for 1 month, may change in the future.
+
+Nth day's summary will include [N-1, N] 2 days, which called [ListCorrelate](https://reference.wolfram.com/language/ref/ListCorrelate.html)

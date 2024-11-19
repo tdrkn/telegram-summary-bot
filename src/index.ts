@@ -37,8 +37,8 @@ export default {
 
 		for (const group of groups) {
 			try {
-				const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 2000')
-					.bind(group.groupId)
+				const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
+					.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
 					.all();
 
 				if (results.length > 0) {
@@ -55,7 +55,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 					});
 					// Clean up old messages
 					await env.DB.prepare('DELETE FROM Messages WHERE groupId=? AND timeStamp < ?')
-						.bind(group.groupId, Date.now() - 48 * 60 * 60 * 1000)
+						.bind(group.groupId, Date.now() - 30 * 24 * 60 * 60 * 1000)
 						.run();
 				}
 			} catch (error) {
