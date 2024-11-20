@@ -20,7 +20,7 @@ const safetySettings = [
 ];
 const account_id = "c3986c87bee332c7e11d834c69ee0742";
 const gateway_name = "telegram-summary-bot";
-
+const model = "gemini-1.5-flash";
 export default {
 	async scheduled(
 		controller: ScheduledController,
@@ -29,8 +29,8 @@ export default {
 	) {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-		const model = genAI.getGenerativeModel(
-			{ model: "gemini-1.5-flash", safetySettings },
+		const genmodel = genAI.getGenerativeModel(
+			{ model, safetySettings },
 			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` }
 		);
 		const { results: groups } = await env.DB.prepare('SELECT DISTINCT groupId FROM Messages').all();
@@ -42,7 +42,7 @@ export default {
 					.all();
 
 				if (results.length > 0) {
-					const result = await model.generateContent(
+					const result = await genmodel.generateContent(
 						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括：
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
           `
@@ -59,7 +59,8 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 						}),
 					});
 					// Clean up old messages
-					await env.DB.prepare('DELETE FROM Messages WHERE groupId=? AND timeStamp < ?')
+					await env.DB.prepare(`DELETE FROM Messages
+						WHERE groupId=? AND timeStamp < ?`)
 						.bind(group.groupId, Date.now() - 30 * 24 * 60 * 60 * 1000)
 						.run();
 				}
@@ -72,8 +73,8 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-		const model = genAI.getGenerativeModel(
-			{ model: "gemini-1.5-flash", safetySettings },
+		const genmodel = genAI.getGenerativeModel(
+			{ model, safetySettings },
 			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` });
 
 		await bot
@@ -103,7 +104,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 					case 'message': {
 						const groupId = bot.update.message?.chat.id;
 						const messageText = bot.update.message?.text || "";
-						if (!bot.update.message?.text?.startsWith('/summary')) {
+						if (!messageText.startsWith('/summary') && !messageText.startsWith('/query')) {
 							await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, userName, content) VALUES (?, ?, ?, ?, ?)')
 								.bind(
 									crypto.randomUUID(),
@@ -115,12 +116,27 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 								.run();
 						}
 
+						if (messageText.startsWith('/query')) {
+							if(!messageText.split(" ")[1]) {
+								await bot.reply('请输入要查询的关键词');
+								return new Response('ok');
+							}
+							const { results } = await env.DB.prepare(`SELECT * FROM Messages
+								WHERE groupId=? AND content GLOB ?
+								ORDER BY timeStamp ASC
+								LIMIT 2000`)
+								.bind(groupId, `*${messageText.split(" ")[1]}*`)
+								.all();
+							await bot.reply(`近 2 天查询结果:
+${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}`);
+						}
+
 						if (bot.update.message?.text?.startsWith('/summary')) {
 							const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 2000')
 								.bind(groupId)
 								.all();
 							if (results.length > 0) {
-								const result = await model.generateContent(
+								const result = await genmodel.generateContent(
 									`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括:
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `
