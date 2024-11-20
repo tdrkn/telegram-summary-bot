@@ -47,11 +47,16 @@ export default {
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
           `
 					);
-					new TelegramApi().sendMessage(env.SECRET_TELEGRAM_API_TOKEN, {
-						chat_id: group.groupId as string || "",
-						text: result.response.text(),
-						reply_to_message_id: '',
-						parse_mode: '',
+					// Use fetch to send message directly to Telegram API
+					await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({
+							chat_id: group.groupId,
+							text: result.response.text()
+						}),
 					});
 					// Clean up old messages
 					await env.DB.prepare('DELETE FROM Messages WHERE groupId=? AND timeStamp < ?')
