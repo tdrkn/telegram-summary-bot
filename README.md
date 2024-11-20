@@ -14,6 +14,20 @@ ai gateway: <https://developers.cloudflare.com/ai-gateway/>
 
 TODO: write more deploy steps.
 
+## Usage
+
+/summary
+
+summarize 24h message
+
+/query word
+
+can search cjk
+
+/status
+
+check bot is alive
+
 ## Cost
 
 0
@@ -27,3 +41,13 @@ gemini-1.5-flash: [free for limited usage and huge context](https://ai.google.de
 ---
 
 Data will be kept for 1 month, may change in the future.
+
+---
+
+## TODO
+
+add method to import group history information so history info can be searched.
+
+add message link in query
+
+maybe auto-delte query result
