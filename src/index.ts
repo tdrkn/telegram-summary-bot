@@ -104,7 +104,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 					case 'message': {
 						const groupId = bot.update.message?.chat.id;
 						const messageText = bot.update.message?.text || "";
-						if (!messageText.startsWith('/summary') && !messageText.startsWith('/query')) {
+						if (!messageText.startsWith('/summary') || !messageText.startsWith('/query')) {
 							await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, userName, content) VALUES (?, ?, ?, ?, ?)')
 								.bind(
 									crypto.randomUUID(),
