@@ -38,12 +38,12 @@ export default {
 		for (const group of groups) {
 			try {
 				const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
-					.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
+					.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
 					.all();
 
 				if (results.length > 0) {
 					const result = await model.generateContent(
-						`概括下面的对话：
+						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括：
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
           `
 					);
@@ -116,7 +116,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 								.all();
 							if (results.length > 0) {
 								const result = await model.generateContent(
-									`概括下面的对话：:
+									`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括:
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `
 								);

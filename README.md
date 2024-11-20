@@ -27,5 +27,3 @@ gemini-1.5-flash: [free for limited usage and huge context](https://ai.google.de
 ---
 
 Data will be kept for 1 month, may change in the future.
-
-Nth day's summary will include [N-1, N] 2 days, which called [ListCorrelate](https://reference.wolfram.com/language/ref/ListCorrelate.html)
