@@ -29,6 +29,7 @@ export default {
 	) {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+		const model = "gemini-1.5-pro";
 		const genmodel = genAI.getGenerativeModel(
 			{ model, safetySettings },
 			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` }
@@ -63,6 +64,8 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 						WHERE groupId=? AND timeStamp < ?`)
 						.bind(group.groupId, Date.now() - 30 * 24 * 60 * 60 * 1000)
 						.run();
+					//@ts-ignore
+					await step.sleep("sleep for a bit", "1 minute")
 				}
 			} catch (error) {
 				console.error(`Error processing group ${group.groupId}:`, error);
