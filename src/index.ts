@@ -96,14 +96,15 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 				return new Response('ok');
 			})
 			.on(':message', async (bot) => {
-				if (!bot.update.message?.chat.type.includes('group')) {
+				if (!bot.update.message!.chat.type.includes('group')) {
 					await bot.reply('I am a bot, please add me to a group to use me.');
 					return new Response('ok');
 				}
 				switch (bot.update_type) {
 					case 'message': {
-						const groupId = bot.update.message?.chat.id;
-						const messageText = bot.update.message?.text || "";
+						const groupId = bot.update.message!.chat.id;
+						const messageText = bot.update.message!.text || "";
+						const messageId = bot.update.message!.message_id;
 						const command = messageText.split(" ")[0];
 						switch (command) {
 							case '/query':
@@ -119,7 +120,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 										.bind(groupId, `*${messageText.split(" ")[1]}*`)
 										.all();
 									await bot.reply(`近 2 天查询结果:
-		${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}`);
+${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[[^]](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId}`}`).join('\n')}`, "Markdown");
 									return new Response('ok');
 								}
 							case '/summary':
@@ -133,19 +134,20 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `
 										);
-										await bot.reply(result.response.text());
+										await bot.reply(result.response.text(), 'Markdown');
 									}
 									return new Response('ok');
 								}
 							default:
 								{
-									await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, userName, content) VALUES (?, ?, ?, ?, ?)')
+									await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, userName, content, messageId) VALUES (?, ?, ?, ?, ?, ?)')
 										.bind(
 											crypto.randomUUID(),
 											groupId,
 											Date.now(),
-											bot.update.message?.from?.first_name || "anonymous", // not interested in user id
-											messageText
+											bot.update.message!.from?.first_name || "anonymous", // not interested in user id
+											messageText,
+											messageId
 										)
 										.run();
 									return new Response('ok');
