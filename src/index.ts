@@ -103,9 +103,18 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 			})
 			.on("summary", async (bot) => {
 				const groupId = bot.update.message!.chat.id;
-				const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 2000')
-					.bind(groupId)
-					.all();
+				const summary = bot.update.message!.text!.split(" ")[1];
+				let results: Record<string, unknown>[];
+				if (summary.endsWith("h")) {
+					results = (await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
+						.bind(groupId, Date.now() - parseInt(summary) * 60 * 60 * 1000)
+						.all()).results;
+				}
+				else {
+					results = (await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp DESC LIMIT ?')
+						.bind(groupId, parseInt(summary))
+						.all()).results;
+				}
 				if (results.length > 0) {
 					const result = await genmodel.generateContent(
 						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括:

@@ -12,13 +12,15 @@ d1: <https://developers.cloudflare.com/d1/get-started/>
 
 ai gateway: <https://developers.cloudflare.com/ai-gateway/>
 
-TODO: write more deploy steps.
+check wiki
 
 ## Usage
 
-/summary
+/summary 10
+/summary 10h
 
-summarize 24h message
+summarize newest 10 messages
+summarize newest 10h messages
 
 /query word
 
@@ -49,3 +51,9 @@ Data will be kept for 1 month, may change in the future.
 add method to import group history information so history info can be searched.
 
 maybe auto-delte query result
+
+---
+
+TODO:
+
+maybe word cloud?
