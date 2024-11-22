@@ -17,9 +17,12 @@ check wiki
 ## Usage
 
 /summary 10
-/summary 10h
 
 summarize newest 10 messages
+
+/summary 10h
+
+
 summarize newest 10h messages
 
 /query word
@@ -32,7 +35,7 @@ check bot is alive
 
 ## Cost
 
-0
+**0**
 
 d1: telegram bot can't read info in the history, only newly sent info, so use database to keep them. [pricing](https://developers.cloudflare.com/d1/platform/pricing/#billing-metrics)
 
@@ -57,3 +60,25 @@ maybe auto-delte query result
 TODO:
 
 maybe word cloud?
+
+## Limitation
+
+This bot will store chat history into my d1 database, so deploy your own bot is recommended. ~~Unless I am in your group~~.
+
+Only messages sent by **user** and **after** the bot join the group can be summarized/query.
+
+> Why doesn't my bot see messages from other bots? Bots talking to each other could potentially get stuck in unwelcome loops. To avoid this, we decided that bots will not be able to see messages from other bots regardless of mode.
+>
+> https://core.telegram.org/bots/faq#why-doesn-39t-my-bot-see-messages-from-other-bots
+
+> You can't get older message than bot join.
+>
+> https://github.com/yagop/node-telegram-bot-api/issues/577
+
+If you want to bypass these, check [luoxu](https://github.com/lilydjwg/luoxu), which uses userbot.
+
+### The cloudflare userId is in source code
+
+> Account IDs are not sensitive and you don't need to hide it.
+>
+> https://www.reddit.com/r/CloudFlare/comments/195s7xx/are_there_any_risks_in_exposing_your_account_id/
