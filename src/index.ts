@@ -44,9 +44,10 @@ export default {
 
 				if (results.length > 0) {
 					const result = await genmodel.generateContent(
-						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括：
+						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括,
+概括的开头是: 本日群聊总结如下：
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
-          `
+`
 					);
 					// Use fetch to send message directly to Telegram API
 					await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
@@ -60,7 +61,9 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 						}),
 					});
 					// Clean up old messages
-					await env.DB.prepare(`DELETE FROM Messages
+					await env.DB.prepare(`
+						DELETE
+						FROM Messages
 						WHERE groupId=? AND timeStamp < ?`)
 						.bind(group.groupId, Date.now() - 30 * 24 * 60 * 60 * 1000)
 						.run();
@@ -91,37 +94,48 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 					await bot.reply('请输入要查询的关键词');
 					return new Response('ok');
 				}
-				const { results } = await env.DB.prepare(`SELECT * FROM Messages
-						WHERE groupId=? AND content GLOB ?
-						ORDER BY timeStamp ASC
-						LIMIT 2000`)
+				const { results } = await env.DB.prepare(`
+					SELECT * FROM Messages
+					WHERE groupId=? AND content GLOB ?
+					ORDER BY timeStamp ASC
+					LIMIT 2000`)
 					.bind(groupId, `*${messageText.split(" ")[1]}*`)
 					.all();
-				await bot.reply(`近 2 天查询结果:
-${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[\[^\]](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "Markdown");
+				await bot.reply(`查询结果:
+${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[👆](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "Markdown");
 				return new Response('ok');
 			})
 			.on("summary", async (bot) => {
 				const groupId = bot.update.message!.chat.id;
 				if (bot.update.message!.text!.split(" ").length === 1) {
-					await bot.reply('请输入要查询的消息数量/时间范围, 如 /summary 114h 或 /summary 514');
+					await bot.reply('请输入要查询的时间范围/消息数量, 如 /summary 114h 或 /summary 514');
 					return new Response('ok');
 				}
 				const summary = bot.update.message!.text!.split(" ")[1];
 				let results: Record<string, unknown>[];
 				if (summary.endsWith("h")) {
-					results = (await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
+					results = (await env.DB.prepare(`
+						SELECT *
+						FROM Messages
+						WHERE groupId=? AND timeStamp >= ?
+						ORDER BY timeStamp ASC
+						LIMIT 2000`)
 						.bind(groupId, Date.now() - parseInt(summary) * 60 * 60 * 1000)
 						.all()).results;
 				}
 				else {
-					results = (await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp DESC LIMIT ?')
+					results = (await env.DB.prepare(`
+						SELECT * FROM Messages
+						WHERE groupId=?
+						ORDER BY timeStamp DESC
+						LIMIT ?`)
 						.bind(groupId, parseInt(summary))
 						.all()).results;
 				}
 				if (results.length > 0) {
 					const result = await genmodel.generateContent(
-						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括:
+						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括
+群聊总结如下:
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `
 					);
@@ -139,7 +153,8 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 						const groupId = bot.update.message!.chat.id;
 						const messageText = bot.update.message!.text || "";
 						const messageId = bot.update.message!.message_id;
-						await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, userName, content, messageId) VALUES (?, ?, ?, ?, ?, ?)')
+						await env.DB.prepare(`
+							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId) VALUES (?, ?, ?, ?, ?, ?)`)
 							.bind(
 								crypto.randomUUID(),
 								groupId,
