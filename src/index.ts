@@ -102,7 +102,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 					.bind(groupId, `*${messageText.split(" ")[1]}*`)
 					.all();
 				await bot.reply(`查询结果:
-${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[👆](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "Markdown");
+${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "Markdown");
 				return new Response('ok');
 			})
 			.on("summary", async (bot) => {
