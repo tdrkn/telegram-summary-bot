@@ -48,6 +48,4 @@ Data will be kept for 1 month, may change in the future.
 
 add method to import group history information so history info can be searched.
 
-add message link in query
-
 maybe auto-delte query result
