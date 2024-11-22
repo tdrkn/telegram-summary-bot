@@ -79,22 +79,40 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 		const genmodel = genAI.getGenerativeModel(
 			{ model, safetySettings },
 			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` });
-
 		await bot
 			.on('status', async (bot) => {
 				await bot.reply('我家还蛮大的');
 				return new Response('ok');
 			})
-			.on('start', async (bot) => {
-				switch (bot.update_type) {
-					case 'message':
-						await bot.reply(
-							'Send me a message to talk to gemini.',
-						);
-						break;
-
-					default:
-						break;
+			.on("query", async (bot) => {
+				const groupId = bot.update.message!.chat.id;
+				const messageText = bot.update.message!.text || "";
+				if (!messageText.split(" ")[1]) {
+					await bot.reply('请输入要查询的关键词');
+					return new Response('ok');
+				}
+				const { results } = await env.DB.prepare(`SELECT * FROM Messages
+						WHERE groupId=? AND content GLOB ?
+						ORDER BY timeStamp ASC
+						LIMIT 2000`)
+					.bind(groupId, `*${messageText.split(" ")[1]}*`)
+					.all();
+				await bot.reply(`近 2 天查询结果:
+${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[\[^\]](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "Markdown");
+				return new Response('ok');
+			})
+			.on("summary", async (bot) => {
+				const groupId = bot.update.message!.chat.id;
+				const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 2000')
+					.bind(groupId)
+					.all();
+				if (results.length > 0) {
+					const result = await genmodel.generateContent(
+						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括:
+${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
+`
+					);
+					await bot.reply(result.response.text(), 'Markdown');
 				}
 				return new Response('ok');
 			})
@@ -108,57 +126,19 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 						const groupId = bot.update.message!.chat.id;
 						const messageText = bot.update.message!.text || "";
 						const messageId = bot.update.message!.message_id;
-						const command = messageText.split(" ")[0];
-						switch (command) {
-							case '/query':
-								{
-									if (!messageText.split(" ")[1]) {
-										await bot.reply('请输入要查询的关键词');
-										return new Response('ok');
-									}
-									const { results } = await env.DB.prepare(`SELECT * FROM Messages
-										WHERE groupId=? AND content GLOB ?
-										ORDER BY timeStamp ASC
-										LIMIT 2000`)
-										.bind(groupId, `*${messageText.split(" ")[1]}*`)
-										.all();
-									await bot.reply(`近 2 天查询结果:
-${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[[^]](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "Markdown");
-									return new Response('ok');
-								}
-							case '/summary':
-								{
-									const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? ORDER BY timeStamp ASC LIMIT 2000')
-										.bind(groupId)
-										.all();
-									if (results.length > 0) {
-										const result = await genmodel.generateContent(
-											`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括:
-${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
-`
-										);
-										await bot.reply(result.response.text(), 'Markdown');
-									}
-									return new Response('ok');
-								}
-							default:
-								{
-									await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, userName, content, messageId) VALUES (?, ?, ?, ?, ?, ?)')
-										.bind(
-											crypto.randomUUID(),
-											groupId,
-											Date.now(),
-											bot.update.message!.from?.first_name || "anonymous", // not interested in user id
-											messageText,
-											messageId
-										)
-										.run();
-									return new Response('ok');
-								}
-						};
+						await env.DB.prepare('INSERT INTO Messages (id, groupId, timeStamp, userName, content, messageId) VALUES (?, ?, ?, ?, ?, ?)')
+							.bind(
+								crypto.randomUUID(),
+								groupId,
+								Date.now(),
+								bot.update.message!.from?.first_name || "anonymous", // not interested in user id
+								messageText,
+								messageId
+							)
+							.run();
+						return new Response('ok');
+
 					}
-					default:
-						break;
 				}
 				return new Response('ok');
 			})
