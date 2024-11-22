@@ -29,7 +29,7 @@ export default {
 	) {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-		const model = "gemini-1.5-pro";
+
 		const genmodel = genAI.getGenerativeModel(
 			{ model, safetySettings },
 			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` }
