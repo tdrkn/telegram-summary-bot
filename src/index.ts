@@ -103,6 +103,10 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 			})
 			.on("summary", async (bot) => {
 				const groupId = bot.update.message!.chat.id;
+				if (bot.update.message!.text!.split(" ").length === 1) {
+					await bot.reply('请输入要查询的消息数量/时间范围, 如 /summary 114h 或 /summary 514');
+					return new Response('ok');
+				}
 				const summary = bot.update.message!.text!.split(" ")[1];
 				let results: Record<string, unknown>[];
 				if (summary.endsWith("h")) {
