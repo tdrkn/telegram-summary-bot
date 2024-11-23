@@ -1,5 +1,9 @@
 # telegram group summary bot
 
+![image_fx_](https://github.com/user-attachments/assets/d9924ced-5310-4edc-9073-bdcc1df1dd6d)
+
+> Image by imagen-3 on ImageFX, prompt "an icon for telegram group message summarize and search message bot sketchy"
+
 Feel scared when seeing 2000+ unread in groups? Now you can read them by LLM!
 
 Use d1, cf worker, ai gateway, gemini-1.5-flash.
