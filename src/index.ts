@@ -18,7 +18,7 @@ const safetySettings = [
 		threshold: HarmBlockThreshold.BLOCK_NONE,
 	},
 ];
-const account_id = "c3986c87bee332c7e11d834c69ee0742";
+
 const gateway_name = "telegram-summary-bot";
 const model = "gemini-1.5-flash";
 export default {
@@ -29,6 +29,7 @@ export default {
 	) {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+		const account_id = env.account_id;
 
 		const genmodel = genAI.getGenerativeModel(
 			{ model, safetySettings },
@@ -79,6 +80,8 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+		const account_id = env.account_id;
+
 		const genmodel = genAI.getGenerativeModel(
 			{ model, safetySettings },
 			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` });

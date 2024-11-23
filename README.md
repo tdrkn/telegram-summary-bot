@@ -76,9 +76,3 @@ Only messages sent by **user** and **after** the bot join the group can be summa
 > https://github.com/yagop/node-telegram-bot-api/issues/577
 
 If you want to bypass these, check [luoxu](https://github.com/lilydjwg/luoxu), which uses userbot.
-
-### The cloudflare userId is in source code
-
-> Account IDs are not sensitive and you don't need to hide it.
->
-> https://www.reddit.com/r/CloudFlare/comments/195s7xx/are_there_any_risks_in_exposing_your_account_id/
