@@ -58,7 +58,8 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 						},
 						body: JSON.stringify({
 							chat_id: group.groupId,
-							text: result.response.text()
+							text: result.response.text(),
+							parse_mode: "Markdown",
 						}),
 					});
 					// Clean up old messages
