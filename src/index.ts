@@ -154,18 +154,23 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 				}
 				switch (bot.update_type) {
 					case 'message': {
-						const groupId = bot.update.message!.chat.id;
-						const messageText = bot.update.message!.text || "";
-						const messageId = bot.update.message!.message_id;
+						const msg = bot.update.message!;
+						const groupId = msg.chat.id;
+						const content = msg.text || "";
+						const messageId = msg.message_id;
+						const groupName = msg.chat.title || "anonymous";
+						const timeStamp = msg.date;
+						const userName = msg.from?.first_name || "anonymous";
 						await env.DB.prepare(`
-							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId) VALUES (?, ?, ?, ?, ?, ?)`)
+							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 							.bind(
 								crypto.randomUUID(),
 								groupId,
-								Date.now(),
-								bot.update.message!.from?.first_name || "anonymous", // not interested in user id
-								messageText,
-								messageId
+								timeStamp,
+								userName, // not interested in user id
+								content,
+								messageId,
+								groupName
 							)
 							.run();
 						return new Response('ok');
