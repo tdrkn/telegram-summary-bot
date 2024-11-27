@@ -118,10 +118,19 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				const summary = bot.update.message!.text!.split(" ")[1];
 				let results: Record<string, unknown>[];
 				try {
-					parseInt(summary);
+					const test = parseInt(summary);
+					if(isNaN(test)){
+						throw new Error("not a number");
+					}
+					if(test < 0){
+						throw new Error("negative number");
+					}
+					if(!isFinite(test)){
+						throw new Error("infinite number");
+					}
 				}
-				catch (e) {
-					await bot.reply('请输入要查询的时间范围/消息数量, 如 /summary 114h 或 /summary 514');
+				catch (e: any) {
+					await bot.reply('请输入要查询的时间范围/消息数量, 如 /summary 114h 或 /summary 514  ' + e.message);
 					return new Response('ok');
 				}
 				if (summary.endsWith("h")) {
