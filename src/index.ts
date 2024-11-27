@@ -117,6 +117,13 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				}
 				const summary = bot.update.message!.text!.split(" ")[1];
 				let results: Record<string, unknown>[];
+				try {
+					parseInt(summary);
+				}
+				catch (e) {
+					await bot.reply('请输入要查询的时间范围/消息数量, 如 /summary 114h 或 /summary 514');
+					return new Response('ok');
+				}
 				if (summary.endsWith("h")) {
 					results = (await env.DB.prepare(`
 						SELECT *
