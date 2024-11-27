@@ -159,7 +159,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 						const content = msg.text || "";
 						const messageId = msg.message_id;
 						const groupName = msg.chat.title || "anonymous";
-						const timeStamp = msg.date;
+						const timeStamp = Date.now();
 						const userName = msg.from?.first_name || "anonymous";
 						await env.DB.prepare(`
 							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
