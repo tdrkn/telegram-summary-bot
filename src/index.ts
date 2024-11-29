@@ -38,10 +38,6 @@ export default {
 		const { results: groups } = await env.DB.prepare('SELECT DISTINCT groupId FROM Messages').all();
 
 		for (const group of groups) {
-			if ([-1001687785734].includes(parseInt(group.groupId as string))) {
-				// todo: use cloudflare r2 to store skip list
-				continue;
-			}
 			try {
 				const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
 					.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
@@ -54,6 +50,10 @@ export default {
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `
 					);
+					if ([-1001687785734].includes(parseInt(group.groupId as string))) {
+						// todo: use cloudflare r2 to store skip list
+						continue;
+					}
 					// Use fetch to send message directly to Telegram API
 					await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
 						method: 'POST',
