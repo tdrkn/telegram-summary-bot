@@ -38,6 +38,10 @@ export default {
 		const { results: groups } = await env.DB.prepare('SELECT DISTINCT groupId FROM Messages').all();
 
 		for (const group of groups) {
+			if ([-1001687785734].includes(parseInt(group.groupId as string))) {
+				// todo: use cloudflare r2 to store skip list
+				continue;
+			}
 			try {
 				const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
 					.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
@@ -119,13 +123,13 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				let results: Record<string, unknown>[];
 				try {
 					const test = parseInt(summary);
-					if(isNaN(test)){
+					if (isNaN(test)) {
 						throw new Error("not a number");
 					}
-					if(test < 0){
+					if (test < 0) {
 						throw new Error("negative number");
 					}
-					if(!isFinite(test)){
+					if (!isFinite(test)) {
 						throw new Error("infinite number");
 					}
 				}
