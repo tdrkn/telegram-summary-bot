@@ -1,40 +1,41 @@
 import TelegramBot, { TelegramApi } from '@codebam/cf-workers-telegram-bot';
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai';
-const safetySettings = [
-	{
-		category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-		threshold: HarmBlockThreshold.BLOCK_NONE,
-	},
-	{
-		category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-		threshold: HarmBlockThreshold.BLOCK_NONE,
-	},
-	{
-		category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-		threshold: HarmBlockThreshold.BLOCK_NONE,
-	},
-	{
-		category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-		threshold: HarmBlockThreshold.BLOCK_NONE,
-	},
-];
 
-const gateway_name = "telegram-summary-bot";
-const model = "gemini-1.5-flash";
+function getGenModel(env: Env) {
+	const model = "gemini-1.5-flash";
+	const gateway_name = "telegram-summary-bot";
+	const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+	const account_id = env.account_id;
+	const safetySettings = [
+		{
+			category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+			threshold: HarmBlockThreshold.BLOCK_NONE,
+		},
+		{
+			category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+			threshold: HarmBlockThreshold.BLOCK_NONE,
+		},
+		{
+			category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+			threshold: HarmBlockThreshold.BLOCK_NONE,
+		},
+		{
+			category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+			threshold: HarmBlockThreshold.BLOCK_NONE,
+		},
+	];
+	return genAI.getGenerativeModel(
+		{ model, safetySettings },
+		{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` }
+	);
+}
+
 export default {
 	async scheduled(
 		controller: ScheduledController,
 		env: Env,
 		ctx: ExecutionContext,
 	) {
-		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
-		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-		const account_id = env.account_id;
-
-		const genmodel = genAI.getGenerativeModel(
-			{ model, safetySettings },
-			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` }
-		);
 		const { results: groups } = await env.DB.prepare('SELECT DISTINCT groupId FROM Messages').all();
 
 		for (const group of groups) {
@@ -44,7 +45,7 @@ export default {
 					.all();
 
 				if (results.length > 0) {
-					const result = await genmodel.generateContent(
+					const result = await getGenModel(env).generateContent(
 						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括,
 概括的开头是: 本日群聊总结如下：
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
@@ -84,12 +85,6 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 	},
 	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
-		const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-		const account_id = env.account_id;
-
-		const genmodel = genAI.getGenerativeModel(
-			{ model, safetySettings },
-			{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` });
 		await bot
 			.on('status', async (bot) => {
 				await bot.reply('我家还蛮大的');
@@ -157,7 +152,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						.all()).results;
 				}
 				if (results.length > 0) {
-					const result = await genmodel.generateContent(
+					const result = await getGenModel(env).generateContent(
 						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括
 群聊总结如下:
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
