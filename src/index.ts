@@ -172,6 +172,12 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 					await bot.reply('I am a bot, please add me to a group to use me.');
 					return new Response('ok');
 				}
+				function getUserName(msg: any) {
+					if (msg.from?.username === "Channel_Bot" && msg.from?.is_bot) {
+						return msg.sender_chat.title as string;
+					}
+					return msg.from?.first_name as string || "anonymous";
+				}
 				switch (bot.update_type) {
 					case 'message': {
 						const msg = bot.update.message!;
@@ -180,7 +186,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 						const messageId = msg.message_id;
 						const groupName = msg.chat.title || "anonymous";
 						const timeStamp = Date.now();
-						const userName = msg.from?.first_name || "anonymous";
+						const userName = getUserName(msg);
 						await env.DB.prepare(`
 							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 							.bind(
