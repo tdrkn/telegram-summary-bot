@@ -33,6 +33,10 @@ summarize newest 10h messages
 
 can search cjk
 
+/ask question
+
+answer question based on group chat
+
 /status
 
 check bot is alive

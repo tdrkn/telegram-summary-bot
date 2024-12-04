@@ -30,6 +30,10 @@ function getGenModel(env: Env) {
 	);
 }
 
+function getCommandVar(str: string, delim: string) {
+	return str.slice(str.indexOf(delim) + delim.length);
+}
+
 export default {
 	async scheduled(
 		controller: ScheduledController,
@@ -106,6 +110,29 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 					.all();
 				await bot.reply(`查询结果:
 ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "Markdown");
+				return new Response('ok');
+			})
+			.on("ask", async (bot) => {
+				const groupId = bot.update.message!.chat.id;
+				const messageText = bot.update.message!.text || "";
+				if (!messageText.split(" ")[1]) {
+					await bot.reply('请输入要问的问题');
+					return new Response('ok');
+				}
+				const { results } = await env.DB.prepare(`
+					SELECT * FROM Messages
+					WHERE groupId=?
+					ORDER BY timeStamp ASC
+					LIMIT 2000`)
+					.bind(groupId)
+					.all();
+				const result = await getGenModel(env).generateContent(
+					`用符合风格的语气回答这个问题:
+${getCommandVar(messageText, " ")}
+上下文如下:
+${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
+`);
+				await bot.reply(result.response.text(), 'Markdown');
 				return new Response('ok');
 			})
 			.on("summary", async (bot) => {
