@@ -51,6 +51,8 @@ cf worker: so no more offline.(I hope so) [pricing](https://developers.cloudflar
 
 gemini-1.5-flash: [free for limited usage and huge context](https://ai.google.dev/pricing?hl=zh-cn#1_5flash)
 
+For openAI or others,use the `getGenModel` from `openai.ts`, fill in the keys, it returns `Promise<string>` so remember to `await`
+
 ---
 
 Data will be kept for 1 month, may change in the future.
