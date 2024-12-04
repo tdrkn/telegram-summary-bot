@@ -185,7 +185,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `
 					);
-					await bot.reply(result.response.text(), 'Markdown');
+					await bot.reply(result.response.text());
 				}
 				return new Response('ok');
 			})
