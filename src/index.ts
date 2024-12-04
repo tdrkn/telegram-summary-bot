@@ -1,6 +1,22 @@
 import TelegramBot, { TelegramApi } from '@codebam/cf-workers-telegram-bot';
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai';
 import telegramifyMarkdown from "telegramify-markdown"
+import { Buffer } from 'node:buffer';
+
+function dispatchContent(content: string) {
+	if (content.startsWith("data:image/jpeg;base64,")) {
+		return {
+			inlineData: {
+				data: content.slice("data:image/jpeg;base64,".length),
+				mimeType: "image/jpeg",
+			},
+		}
+	}
+	return content;
+}
+
+type R = Record<string, unknown>
+
 function getGenModel(env: Env) {
 	const model = "gemini-1.5-flash";
 	const gateway_name = "telegram-summary-bot";
@@ -49,12 +65,11 @@ export default {
 					.all();
 
 				if (results.length > 0) {
-					const result = await getGenModel(env).generateContent(
-						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括,
-概括的开头是: 本日群聊总结如下：
-${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
-`
-					);
+					const result = await getGenModel(env).generateContent([
+						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括,`,
+						`概括的开头是: 本日群聊总结如下：`,
+						...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)])
+					]);
 					if ([-1001687785734].includes(parseInt(group.groupId as string))) {
 						// todo: use cloudflare r2 to store skip list
 						continue;
@@ -126,12 +141,12 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					LIMIT 2000`)
 					.bind(groupId)
 					.all();
-				const result = await getGenModel(env).generateContent(
-					`用符合风格的语气回答这个问题:
-${getCommandVar(messageText, " ")}
-上下文如下:
-${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
-`);
+				const result = await getGenModel(env).generateContent([
+					`用符合风格的语气回答这个问题:`,
+					getCommandVar(messageText, " "),
+					`上下文如下:`,
+					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)])
+				]);
 				await bot.reply(telegramifyMarkdown(result.response.text(), "keep"), 'Markdown');
 				return new Response('ok');
 			})
@@ -180,10 +195,11 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 				}
 				if (results.length > 0) {
 					const result = await getGenModel(env).generateContent(
-						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括
-群聊总结如下:
-${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
-`
+						[
+							`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括,`,
+							`群聊总结如下:`,
+							...results.map((r: any) => `${r.userName}: ${r.content}`)
+						]
 					);
 					await bot.reply(telegramifyMarkdown(result.response.text(), 'keep'), 'Markdown');
 				}
@@ -223,6 +239,30 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 							.run();
 						return new Response('ok');
 
+					}
+					case "photo": {
+						const msg = bot.update.message!;
+						const groupId = msg.chat.id;
+						const messageId = msg.message_id;
+						const groupName = msg.chat.title || "anonymous";
+						const timeStamp = Date.now();
+						const userName = getUserName(msg);
+						const photo = msg.photo![msg.photo!.length - 1];
+						const file = await bot.getFile(photo.file_id).then((response) => response.arrayBuffer());
+
+						await env.DB.prepare(`
+							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+							.bind(
+								crypto.randomUUID(),
+								groupId,
+								timeStamp,
+								userName, // not interested in user id
+								"data:image/jpeg;base64," + Buffer.from(file).toString("base64"),
+								messageId,
+								groupName
+							)
+							.run();
+						return new Response('ok');
 					}
 				}
 				return new Response('ok');
