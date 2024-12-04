@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "@codebam/cf-workers-telegram-bot": "^7.27.0",
-    "@google/generative-ai": "^0.21.0"
+    "@google/generative-ai": "^0.21.0",
+    "telegramify-markdown": "^1.2.2"
   },
   "overrides": {
     "is-core-module": "npm:@nolyfill/is-core-module@^1"

@@ -1,6 +1,6 @@
 import TelegramBot, { TelegramApi } from '@codebam/cf-workers-telegram-bot';
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai';
-
+import telegramifyMarkdown from "telegramify-markdown"
 function getGenModel(env: Env) {
 	const model = "gemini-1.5-flash";
 	const gateway_name = "telegram-summary-bot";
@@ -67,7 +67,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 						},
 						body: JSON.stringify({
 							chat_id: group.groupId,
-							text: result.response.text(),
+							text: telegramifyMarkdown(result.response.text(), 'keep'),
 							parse_mode: "Markdown",
 						}),
 					});
@@ -132,7 +132,7 @@ ${getCommandVar(messageText, " ")}
 上下文如下:
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `);
-				await bot.reply(result.response.text(), 'Markdown');
+				await bot.reply(telegramifyMarkdown(result.response.text(), "keep"), 'Markdown');
 				return new Response('ok');
 			})
 			.on("summary", async (bot) => {
@@ -185,7 +185,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 ${results.map((r: any) => `${r.userName}: ${r.content}`).join('\n')}
 `
 					);
-					await bot.reply(result.response.text());
+					await bot.reply(telegramifyMarkdown(result.response.text(), 'keep'), 'Markdown');
 				}
 				return new Response('ok');
 			})
