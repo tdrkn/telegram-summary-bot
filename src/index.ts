@@ -198,7 +198,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						[
 							`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括,`,
 							`群聊总结如下:`,
-							...results.map((r: any) => `${r.userName}: ${r.content}`)
+							...results.flatMap((r: any) => [`${r.userName}:`, ` ${dispatchContent(r.content)}`])
 						]
 					);
 					await bot.reply(telegramifyMarkdown(result.response.text(), 'keep'), 'MarkdownV2');
