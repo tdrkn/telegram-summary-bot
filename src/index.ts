@@ -138,7 +138,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					SELECT * FROM Messages
 					WHERE groupId=?
 					ORDER BY timeStamp ASC
-					LIMIT 2000`)
+					LIMIT 1000`)
 					.bind(groupId)
 					.all();
 				const result = await getGenModel(env).generateContent([
