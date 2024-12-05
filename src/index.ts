@@ -15,7 +15,16 @@ function dispatchContent(content: string) {
 	return content;
 }
 
-type R = Record<string, unknown>
+function getMessageLink(r: R) {
+	return `https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId}`;
+}
+
+type R = {
+	groupId: string;
+	userName: string;
+	content: string;
+	messageId: number;
+}
 
 function getGenModel(env: Env) {
 	const model = "gemini-1.5-flash";
@@ -68,6 +77,7 @@ export default {
 					const result = await getGenModel(env).generateContent([
 						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括,`,
 						`概括的开头是: 本日群聊总结如下：`,
+						//@ts-ignore
 						...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)])
 					]);
 					if ([-1001687785734].includes(parseInt(group.groupId as string))) {
@@ -142,8 +152,10 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					.bind(groupId)
 					.all();
 				const result = await getGenModel(env).generateContent([
-					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)]),
-					`基于上面的记录, 用符合上文风格的语气回答这个问题:`,
+					`下面是一系列的对话, 格式是 用户名: 对话内容, 消息链接`,
+					//@ts-ignore
+					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getMessageLink(r)]),
+					`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接`,
 					getCommandVar(messageText, " "),
 				]);
 				await bot.reply(telegramifyMarkdown(result.response.text(), "keep"), 'MarkdownV2');
@@ -195,9 +207,9 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				if (results.length > 0) {
 					const result = await getGenModel(env).generateContent(
 						[
-							`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容`,
+							`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接`,
 							`群聊总结如下:`,
-							...results.flatMap((r: any) => [`${r.userName}:`, ` ${dispatchContent(r.content)}`])
+							...results.flatMap((r: any) => [`${r.userName}:`, ` ${dispatchContent(r.content)}`, getMessageLink(r)]),
 						]
 					);
 					await bot.reply(telegramifyMarkdown(result.response.text(), 'keep'), 'MarkdownV2');
