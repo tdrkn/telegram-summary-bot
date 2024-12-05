@@ -83,7 +83,7 @@ export default {
 						body: JSON.stringify({
 							chat_id: group.groupId,
 							text: telegramifyMarkdown(result.response.text(), 'keep'),
-							parse_mode: "Markdown",
+							parse_mode: "MarkdownV2",
 						}),
 					});
 					// Clean up old messages
@@ -124,7 +124,7 @@ export default {
 					.bind(groupId, `*${messageText.split(" ")[1]}*`)
 					.all();
 				await bot.reply(`查询结果:
-${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "Markdown");
+${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "MarkdownV2");
 				return new Response('ok');
 			})
 			.on("ask", async (bot) => {
@@ -147,7 +147,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					`上下文如下:`,
 					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)])
 				]);
-				await bot.reply(telegramifyMarkdown(result.response.text(), "keep"), 'Markdown');
+				await bot.reply(telegramifyMarkdown(result.response.text(), "keep"), 'MarkdownV2');
 				return new Response('ok');
 			})
 			.on("summary", async (bot) => {
@@ -201,7 +201,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 							...results.map((r: any) => `${r.userName}: ${r.content}`)
 						]
 					);
-					await bot.reply(telegramifyMarkdown(result.response.text(), 'keep'), 'Markdown');
+					await bot.reply(telegramifyMarkdown(result.response.text(), 'keep'), 'MarkdownV2');
 				}
 				return new Response('ok');
 			})
