@@ -85,17 +85,15 @@ export default {
 						continue;
 					}
 					// Use fetch to send message directly to Telegram API
-					await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-						},
-						body: JSON.stringify({
-							chat_id: group.groupId,
-							text: telegramifyMarkdown(result.response.text(), 'keep'),
-							parse_mode: "MarkdownV2",
-						}),
-					});
+					const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
+					bot.currentContext.api.sendMessage(
+						bot.api.toString(), {
+						"chat_id": group.groupId as string,
+						"parse_mode": "MarkdownV2",
+						"text": telegramifyMarkdown(result.response.text(), 'keep'),
+						reply_to_message_id: -1,
+						}
+					)
 					// Clean up old messages
 					await env.DB.prepare(`
 						DELETE
@@ -115,15 +113,15 @@ export default {
 	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
 		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		await bot
-			.on('status', async (bot) => {
-				await bot.reply('我家还蛮大的');
+			.on('status', async (ctx) => {
+				await ctx.reply('我家还蛮大的');
 				return new Response('ok');
 			})
-			.on("query", async (bot) => {
-				const groupId = bot.update.message!.chat.id;
-				const messageText = bot.update.message!.text || "";
+			.on("query", async (ctx) => {
+				const groupId = ctx.update.message!.chat.id;
+				const messageText = ctx.update.message!.text || "";
 				if (!messageText.split(" ")[1]) {
-					await bot.reply('请输入要查询的关键词');
+					await ctx.reply('请输入要查询的关键词');
 					return new Response('ok');
 				}
 				const { results } = await env.DB.prepare(`
@@ -133,15 +131,16 @@ export default {
 					LIMIT 2000`)
 					.bind(groupId, `*${messageText.split(" ")[1]}*`)
 					.all();
-				await bot.reply(`查询结果:
+				await ctx.reply(`查询结果:
 ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "MarkdownV2");
 				return new Response('ok');
 			})
-			.on("ask", async (bot) => {
-				const groupId = bot.update.message!.chat.id;
-				const messageText = bot.update.message!.text || "";
+			.on("ask", async (ctx) => {
+				const groupId = ctx.update.message!.chat.id;
+				const userId = ctx.update.message!.from!.id;
+				const messageText = ctx.update.message!.text || "";
 				if (!messageText.split(" ")[1]) {
-					await bot.reply('请输入要问的问题');
+					await ctx.reply('请输入要问的问题');
 					return new Response('ok');
 				}
 				const { results } = await env.DB.prepare(`
@@ -158,7 +157,15 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接`,
 					getCommandVar(messageText, " "),
 				]);
-				await bot.reply(telegramifyMarkdown(result.response.text(), "keep"), 'MarkdownV2');
+				let res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
+					"chat_id": userId,
+					"parse_mode":  "MarkdownV2",
+					"text": telegramifyMarkdown(result.response.text(), 'keep'),
+					reply_to_message_id: -1,
+				});
+				if (!res.ok) {
+					await ctx.reply(`请开启和 bot 的私聊, 不然无法接收消息`);
+				}
 				return new Response('ok');
 			})
 			.on("summary", async (bot) => {
