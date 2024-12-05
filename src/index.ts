@@ -142,10 +142,9 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					.bind(groupId)
 					.all();
 				const result = await getGenModel(env).generateContent([
-					`用符合风格的语气回答这个问题:`,
+					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)]),
+					`基于上面的记录, 用符合上文风格的语气回答这个问题:`,
 					getCommandVar(messageText, " "),
-					`上下文如下:`,
-					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)])
 				]);
 				await bot.reply(telegramifyMarkdown(result.response.text(), "keep"), 'MarkdownV2');
 				return new Response('ok');
@@ -160,13 +159,13 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				let results: Record<string, unknown>[];
 				try {
 					const test = parseInt(summary);
-					if (isNaN(test)) {
+					if (Number.isNaN(test)) {
 						throw new Error("not a number");
 					}
 					if (test < 0) {
 						throw new Error("negative number");
 					}
-					if (!isFinite(test)) {
+					if (!Number.isFinite(test)) {
 						throw new Error("infinite number");
 					}
 				}
@@ -196,7 +195,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				if (results.length > 0) {
 					const result = await getGenModel(env).generateContent(
 						[
-							`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括,`,
+							`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容`,
 							`群聊总结如下:`,
 							...results.flatMap((r: any) => [`${r.userName}:`, ` ${dispatchContent(r.content)}`])
 						]
