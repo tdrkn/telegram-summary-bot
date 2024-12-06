@@ -89,9 +89,9 @@ export default {
 						// todo: use cloudflare r2 to store skip list
 						continue;
 					}
-					const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
-					const res = await bot.currentContext.api.sendMessage(
-						bot.api.toString(), {
+					const ctx = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN).currentContext;
+					const res = await ctx.api.sendMessage(
+						ctx.api.toString(), {
 						"chat_id": group.groupId as string,
 						"parse_mode": "MarkdownV2",
 						"text": telegramifyMarkdown(result.response.text(), 'keep'),
