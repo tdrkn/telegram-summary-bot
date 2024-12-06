@@ -19,11 +19,16 @@ function getMessageLink(r: R) {
 	return `https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId}`;
 }
 
+function getSendTime(r: R) {
+	return new Date(r.timeStamp).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
+}
+
 type R = {
 	groupId: string;
 	userName: string;
 	content: string;
 	messageId: number;
+	timeStamp: number;
 }
 
 function getGenModel(env: Env) {
@@ -75,10 +80,10 @@ export default {
 
 				if (results.length > 0) {
 					const result = await getGenModel(env).generateContent([
-						`用符合风格的语气概括下面的对话, 如果对话里出现了多个主题, 请分条概括,`,
+						`用符合风格的语气概括下面的对话, 格式是 用户名: 对话内容, 发送时间. 如果对话里出现了多个主题, 请分条概括,`,
 						`概括的开头是: 本日群聊总结如下：`,
 						//@ts-ignore
-						...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)])
+						...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getSendTime(r)]),
 					]);
 					if ([-1001687785734].includes(parseInt(group.groupId as string))) {
 						// todo: use cloudflare r2 to store skip list
@@ -92,7 +97,7 @@ export default {
 						"parse_mode": "MarkdownV2",
 						"text": telegramifyMarkdown(result.response.text(), 'keep'),
 						reply_to_message_id: -1,
-						}
+					}
 					)
 					// Clean up old messages
 					await env.DB.prepare(`
@@ -111,8 +116,7 @@ export default {
 		console.log("cron processed");
 	},
 	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
-		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
-		await bot
+		await new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN)
 			.on('status', async (ctx) => {
 				await ctx.reply('我家还蛮大的');
 				return new Response('ok');
@@ -151,15 +155,15 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					.bind(groupId)
 					.all();
 				const result = await getGenModel(env).generateContent([
-					`下面是一系列的对话, 格式是 用户名: 对话内容, 消息链接`,
+					`下面是一系列的对话, 格式是 用户名: 对话内容, 消息链接, 发送时间`,
 					//@ts-ignore
-					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getMessageLink(r)]),
+					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getMessageLink(r), getSendTime(r)]),
 					`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接`,
 					getCommandVar(messageText, " "),
 				]);
 				let res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
 					"chat_id": userId,
-					"parse_mode":  "MarkdownV2",
+					"parse_mode": "MarkdownV2",
 					"text": telegramifyMarkdown(result.response.text(), 'keep'),
 					reply_to_message_id: -1,
 				});
