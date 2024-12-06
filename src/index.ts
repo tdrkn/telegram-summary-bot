@@ -137,7 +137,7 @@ export default {
 				const { results } = await env.DB.prepare(`
 					SELECT * FROM Messages
 					WHERE groupId=? AND content GLOB ?
-					ORDER BY timeStamp ASC
+					ORDER BY timeStamp DESC
 					LIMIT 2000`)
 					.bind(groupId, `*${messageText.split(" ")[1]}*`)
 					.all();
@@ -160,10 +160,15 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					return new Response('ok');
 				}
 				const { results } = await env.DB.prepare(`
-					SELECT * FROM Messages
-					WHERE groupId=?
+					WITH latest_1000 AS (
+						SELECT * FROM Messages
+						WHERE groupId=?
+						ORDER BY timeStamp DESC
+						LIMIT 1000
+					)
+					SELECT * FROM latest_1000
 					ORDER BY timeStamp ASC
-					LIMIT 1000`)
+					`)
 					.bind(groupId)
 					.all();
 				const result = await getGenModel(env).generateContent([
@@ -227,10 +232,15 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				}
 				else {
 					results = (await env.DB.prepare(`
-						SELECT * FROM Messages
-						WHERE groupId=?
-						ORDER BY timeStamp DESC
-						LIMIT ?`)
+						WITH latest_n AS (
+							SELECT * FROM Messages
+							WHERE groupId=?
+							ORDER BY timeStamp DESC
+							LIMIT ?
+						)
+						SELECT * FROM latest_n
+						ORDER BY timeStamp ASC
+						`)
 						.bind(groupId, parseInt(summary))
 						.all()).results;
 				}
