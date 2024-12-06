@@ -172,9 +172,9 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					.bind(groupId)
 					.all();
 				const result = await getGenModel(env).generateContent([
-					`下面是一系列的对话, 格式是 用户名: 对话内容, 消息链接, 发送时间`,
+					`下面是一系列的对话, 格式是 用户名: 对话内容, 发送时间, 消息链接`,
 					//@ts-ignore
-					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getMessageLink(r), getSendTime(r)]),
+					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getSendTime(r), getMessageLink(r)]),
 					`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 在链接的两侧加空格`,
 					getCommandVar(messageText, " "),
 				]);
