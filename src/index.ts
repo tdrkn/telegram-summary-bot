@@ -89,15 +89,20 @@ export default {
 						// todo: use cloudflare r2 to store skip list
 						continue;
 					}
-					const ctx = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN).currentContext;
-					const res = await ctx.api.sendMessage(
-						ctx.api.toString(), {
-						"chat_id": group.groupId as string,
-						"parse_mode": "MarkdownV2",
-						"text": telegramifyMarkdown(result.response.text(), 'keep'),
-						reply_to_message_id: -1,
-					}
-					)
+
+					// Use fetch to send message directly to Telegram API
+					const res = await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({
+							chat_id: group.groupId,
+							text: telegramifyMarkdown(result.response.text(), 'keep'),
+							parse_mode: "MarkdownV2",
+						}),
+					});
+
 					if (!res.ok) {
 						console.error(`Error sending message to group ${group.groupId}:`, JSON.stringify(await res.json()));
 					}
