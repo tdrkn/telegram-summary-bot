@@ -80,10 +80,10 @@ export default {
 
 				if (results.length > 0) {
 					const result = await getGenModel(env).generateContent([
-						`用符合风格的语气概括下面的对话, 格式是 用户名: 对话内容, 发送时间. 如果对话里出现了多个主题, 请分条概括,`,
+						`用符合风格的语气概括下面的对话, 格式是 用户名: 对话内容. 如果对话里出现了多个主题, 请分条概括,`,
 						`概括的开头是: 本日群聊总结如下：`,
 						//@ts-ignore
-						...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getSendTime(r)]),
+						...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)]),
 					]);
 					if ([-1001687785734].includes(parseInt(group.groupId as string))) {
 						// todo: use cloudflare r2 to store skip list
