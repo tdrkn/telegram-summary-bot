@@ -175,7 +175,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					`下面是一系列的对话, 格式是 用户名: 对话内容, 消息链接, 发送时间`,
 					//@ts-ignore
 					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getMessageLink(r), getSendTime(r)]),
-					`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接`,
+					`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为 [时间 或 关键词](消息链接)`,
 					getCommandVar(messageText, " "),
 				]);
 				let response_text: string;
