@@ -164,6 +164,16 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					}
 					return new Response('ok');
 				}
+				let res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
+					"chat_id": userId,
+					"parse_mode": "MarkdownV2",
+					"text": "bot 已经收到你的问题, 请稍等",
+					reply_to_message_id: -1,
+				});
+				if (!res.ok) {
+					await ctx.reply(`请开启和 bot 的私聊, 不然无法接收消息`);
+					return new Response('ok');
+				}
 				const { results } = await env.DB.prepare(`
 					WITH latest_1000 AS (
 						SELECT * FROM Messages
@@ -190,14 +200,14 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				else {
 					response_text = telegramifyMarkdown(result.response.text(), 'keep');
 				}
-				let res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
+				res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
 					"chat_id": userId,
 					"parse_mode": "MarkdownV2",
 					"text": response_text,
 					reply_to_message_id: -1,
 				});
 				if (!res.ok) {
-					await ctx.reply(`请开启和 bot 的私聊, 不然无法接收消息`);
+					await ctx.reply(`发送失败`);
 				}
 				return new Response('ok');
 			})
