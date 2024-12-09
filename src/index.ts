@@ -23,6 +23,50 @@ function getSendTime(r: R) {
 	return new Date(r.timeStamp).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 }
 
+/**
+ * 处理 Markdown 文本中的重复链接，将其转换为顺序编号的格式
+ * @param {string} text - 输入的 Markdown 文本
+ * @param {Object} options - 配置选项
+ * @param {string} options.prefix - 链接文本的前缀，默认为"链接"
+ * @param {boolean} options.useEnglish - 是否使用英文(link1)而不是中文(链接1)，默认为 false
+ * @returns {string} 处理后的 Markdown 文本
+ */
+function processMarkdownLinks(text: string, options: { prefix: string, useEnglish: boolean } = {
+	prefix: '引用',
+	useEnglish: false
+}) {
+	const {
+		prefix,
+		useEnglish
+	} = options;
+
+	// 用于存储已经出现过的链接
+	const linkMap = new Map();
+	let linkCounter = 1;
+
+	// 匹配 markdown 链接的正则表达式
+	const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+
+	return text.replace(linkPattern, (match, displayText, url) => {
+		// 只处理显示文本和 URL 完全相同的情况
+		if (displayText !== url) {
+			return match; // 保持原样
+		}
+
+		// 如果这个 URL 已经出现过，使用已存在的编号
+		if (!linkMap.has(url)) {
+			linkMap.set(url, linkCounter++);
+		}
+		const linkNumber = linkMap.get(url);
+
+		// 根据选项决定使用中文还是英文格式
+		const linkPrefix = useEnglish ? 'link' : prefix;
+
+		// 返回新的格式 [链接1](原URL) 或 [link1](原URL)
+		return `[${linkPrefix}${linkNumber}](${url})`;
+	});
+}
+
 type R = {
 	groupId: string;
 	userName: string;
@@ -98,7 +142,7 @@ export default {
 						},
 						body: JSON.stringify({
 							chat_id: group.groupId,
-							text: telegramifyMarkdown(result.response.text(), 'keep'),
+							text: processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')),
 							parse_mode: "MarkdownV2",
 						}),
 					});
@@ -198,7 +242,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					response_text = "无法回答, 理由" + result.response.promptFeedback.blockReason;
 				}
 				else {
-					response_text = telegramifyMarkdown(result.response.text(), 'keep');
+					response_text = processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep'));
 				}
 				res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
 					"chat_id": userId,
@@ -267,7 +311,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 							...results.flatMap((r: any) => [`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)]),
 						]
 					);
-					await bot.reply(telegramifyMarkdown(result.response.text(), 'keep'), 'MarkdownV2');
+					await bot.reply(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')), 'MarkdownV2');
 				}
 				return new Response('ok');
 			})
