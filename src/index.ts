@@ -125,7 +125,7 @@ export default {
 			.on('status', async (ctx) => {
 				const res = (await ctx.reply('我家还蛮大的'))!;
 				if (!res.ok) {
-					console.error(`Error sending message:`, JSON.stringify(await res.json()));
+					console.error(`Error sending message:`, res);
 				}
 				return new Response('ok');
 			})
