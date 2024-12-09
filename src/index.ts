@@ -22,7 +22,27 @@ function getMessageLink(r: R) {
 function getSendTime(r: R) {
 	return new Date(r.timeStamp).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 }
+/**
+ * 将数字转换为上标数字
+ * @param {number} num - 要转换的数字
+ * @returns {string} 上标形式的数字
+ */
+function toSuperscript(num: number) {
+    const superscripts = {
+        '0': '⁰',
+        '1': '¹',
+        '2': '²',
+        '3': '³',
+        '4': '⁴',
+        '5': '⁵',
+        '6': '⁶',
+        '7': '⁷',
+        '8': '⁸',
+        '9': '⁹'
+    };
 
+    return String(num).split('').map(digit => superscripts[digit]).join('');
+}
 /**
  * 处理 Markdown 文本中的重复链接，将其转换为顺序编号的格式
  * @param {string} text - 输入的 Markdown 文本
@@ -63,7 +83,7 @@ export function processMarkdownLinks(text: string, options: { prefix: string, us
 		const linkPrefix = useEnglish ? 'link' : prefix;
 
 		// 返回新的格式 [链接1](原URL) 或 [link1](原URL)
-		return `[${linkPrefix}${linkNumber}](${url})`;
+		return `[${linkPrefix}${toSuperscript(linkNumber)}](${url})`;
 	});
 }
 
