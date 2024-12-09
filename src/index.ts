@@ -304,7 +304,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						SELECT * FROM latest_n
 						ORDER BY timeStamp ASC
 						`)
-						.bind(groupId, parseInt(summary))
+						.bind(groupId, Math.min(parseInt(summary), 2000))
 						.all()).results;
 				}
 				if (results.length > 0) {
