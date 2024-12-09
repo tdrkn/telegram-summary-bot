@@ -135,7 +135,7 @@ export default {
 				if (!messageText.split(" ")[1]) {
 					const res = (await ctx.reply('请输入要查询的关键词'))!;
 					if (!res.ok) {
-						console.error(`Error sending message:`);
+						console.error(`Error sending message:`, res);
 					}
 					return new Response('ok');
 				}
@@ -149,7 +149,7 @@ export default {
 				const res = (await ctx.reply(`查询结果:
 ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "MarkdownV2"))!;
 				if (!res.ok) {
-					console.error(`Error sending message:`, JSON.stringify(await res.json()));
+					console.error(`Error sending message:`, res);
 				}
 				return new Response('ok');
 			})
@@ -160,7 +160,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				if (!messageText.split(" ")[1]) {
 					const res = (await ctx.reply('请输入要问的问题'))!;
 					if (!res.ok) {
-						console.error(`Error sending message:`, JSON.stringify(await res.json()));
+						console.error(`Error sending message:`, res);
 					}
 					return new Response('ok');
 				}
