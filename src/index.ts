@@ -2,9 +2,14 @@ import TelegramBot, { TelegramApi } from '@codebam/cf-workers-telegram-bot';
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai';
 import telegramifyMarkdown from "telegramify-markdown"
 import { Buffer } from 'node:buffer';
-
+import { isJPEGBase64 } from './isJpeg';
 function dispatchContent(content: string) {
 	if (content.startsWith("data:image/jpeg;base64,")) {
+		const { isValid, reason } = isJPEGBase64(content);
+		if (!isValid) {
+			console.error(`Invalid JPEG: ${reason}`);
+			return content
+		}
 		return {
 			inlineData: {
 				data: content.slice("data:image/jpeg;base64,".length),
@@ -28,20 +33,20 @@ function getSendTime(r: R) {
  * @returns {string} 上标形式的数字
  */
 function toSuperscript(num: number) {
-    const superscripts = {
-        '0': '⁰',
-        '1': '¹',
-        '2': '²',
-        '3': '³',
-        '4': '⁴',
-        '5': '⁵',
-        '6': '⁶',
-        '7': '⁷',
-        '8': '⁸',
-        '9': '⁹'
-    };
+	const superscripts = {
+		'0': '⁰',
+		'1': '¹',
+		'2': '²',
+		'3': '³',
+		'4': '⁴',
+		'5': '⁵',
+		'6': '⁶',
+		'7': '⁷',
+		'8': '⁸',
+		'9': '⁹'
+	};
 
-    return String(num).split('').map(digit => superscripts[digit]).join('');
+	return String(num).split('').map(digit => superscripts[digit]).join('');
 }
 /**
  * 处理 Markdown 文本中的重复链接，将其转换为顺序编号的格式
@@ -169,6 +174,7 @@ export default {
 
 					if (!res.ok) {
 						console.error(`Error sending message to group ${group.groupId}:`, JSON.stringify(await res.json()));
+						return new Response('ok');
 					}
 					// Clean up old messages
 					await env.DB.prepare(`
@@ -180,6 +186,7 @@ export default {
 				}
 			} catch (error) {
 				console.error(`Error processing group ${group.groupId}:`, error);
+				return new Response('ok');
 			}
 		}
 		console.log("cron processed");
@@ -250,17 +257,23 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					`)
 					.bind(groupId)
 					.all();
-				const result = await getGenModel(env).generateContent([
-					`下面是一系列的对话, 格式是 用户名: 对话内容, 发送时间, 消息链接`,
-					//@ts-ignore
-					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getSendTime(r), getMessageLink(r)]),
-					`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+				let result;
+				try {
+					result = await getGenModel(env).generateContent([
+						`下面是一系列的对话, 格式是 用户名: 对话内容, 发送时间, 消息链接`,
+						//@ts-ignore
+						...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getSendTime(r), getMessageLink(r)]),
+						`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
 [关键字1](链接本体)
 [关键字2](链接本体), 在链接的两侧加空格`,
-					getCommandVar(messageText, " "),
-				]);
+						getCommandVar(messageText, " "),
+					]);
+				} catch (e) {
+					console.error(e);
+					return new Response('ok');
+				}
 				let response_text: string;
 				if (result.response.promptFeedback?.blockReason) {
 					response_text = "无法回答, 理由" + result.response.promptFeedback.blockReason;
@@ -328,19 +341,25 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						.all()).results;
 				}
 				if (results.length > 0) {
-					const result = await getGenModel(env).generateContent(
-						[
-							`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+					try {
+						const result = await getGenModel(env).generateContent(
+							[
+								`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
 [关键字1](链接本体)
 [关键字2](链接本体)`,
-							`群聊总结如下:`,
-							...results.flatMap((r: any) => [`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)]),
-						]
-					);
-					await bot.reply(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')), 'MarkdownV2');
+								`群聊总结如下:`,
+								...results.flatMap((r: any) => [`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)]),
+							]
+						);
+						await bot.reply(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')), 'MarkdownV2');
+					}
+					catch (e) {
+						console.error(e);
+					}
 				}
+
 				return new Response('ok');
 			})
 			.on(':message', async (bot) => {
