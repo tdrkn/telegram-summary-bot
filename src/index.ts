@@ -31,7 +31,7 @@ function getSendTime(r: R) {
  * @param {boolean} options.useEnglish - 是否使用英文(link1)而不是中文(链接1)，默认为 false
  * @returns {string} 处理后的 Markdown 文本
  */
-function processMarkdownLinks(text: string, options: { prefix: string, useEnglish: boolean } = {
+export function processMarkdownLinks(text: string, options: { prefix: string, useEnglish: boolean } = {
 	prefix: '引用',
 	useEnglish: false
 }) {
@@ -234,7 +234,11 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					`下面是一系列的对话, 格式是 用户名: 对话内容, 发送时间, 消息链接`,
 					//@ts-ignore
 					...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getSendTime(r), getMessageLink(r)]),
-					`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 在链接的两侧加空格`,
+					`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+[引用1](链接本体)
+[引用2](链接本体)
+[关键字1](链接本体)
+[关键字2](链接本体), 在链接的两侧加空格`,
 					getCommandVar(messageText, " "),
 				]);
 				let response_text: string;
@@ -306,7 +310,11 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				if (results.length > 0) {
 					const result = await getGenModel(env).generateContent(
 						[
-							`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接`,
+							`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+[引用1](链接本体)
+[引用2](链接本体)
+[关键字1](链接本体)
+[关键字2](链接本体)`,
 							`群聊总结如下:`,
 							...results.flatMap((r: any) => [`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)]),
 						]
