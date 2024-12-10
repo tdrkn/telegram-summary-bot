@@ -5,11 +5,6 @@ import { Buffer } from 'node:buffer';
 import { isJPEGBase64 } from './isJpeg';
 function dispatchContent(content: string) {
 	if (content.startsWith("data:image/jpeg;base64,")) {
-		const { isValid, reason } = isJPEGBase64(content);
-		if (!isValid) {
-			console.error(`Invalid JPEG: ${reason}`);
-			return content
-		}
 		return {
 			inlineData: {
 				data: content.slice("data:image/jpeg;base64,".length),
@@ -182,6 +177,13 @@ export default {
 						FROM Messages
 						WHERE groupId=? AND timeStamp < ?`)
 						.bind(group.groupId, Date.now() - 30 * 24 * 60 * 60 * 1000)
+						.run();
+					// clean up old images
+					await env.DB.prepare(`
+						DELETE
+						FROM Messages
+						WHERE groupId=? AND timeStamp < ? AND content LIKE 'data:image/jpeg;base64,%'`)
+						.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
 						.run();
 				}
 			} catch (error) {
@@ -406,7 +408,10 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						const userName = getUserName(msg);
 						const photo = msg.photo![msg.photo!.length - 1];
 						const file = await bot.getFile(photo.file_id).then((response) => response.arrayBuffer());
-
+						if (!isJPEGBase64(Buffer.from(file).toString("base64"))) {
+							console.error("not a jpeg");
+							return new Response('ok');
+						}
 						await env.DB.prepare(`
 							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 							.bind(
