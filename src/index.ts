@@ -27,7 +27,7 @@ function getSendTime(r: R) {
  * @param {number} num - 要转换的数字
  * @returns {string} 上标形式的数字
  */
-function toSuperscript(num: number) {
+export function toSuperscript(num: number) {
 	const superscripts = {
 		'0': '⁰',
 		'1': '¹',
