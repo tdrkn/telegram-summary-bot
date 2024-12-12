@@ -151,7 +151,7 @@ export default {
 [关键字2](链接本体)`,
 						`概括的开头是: 本日群聊总结如下：`,
 						//@ts-ignore
-						...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string)]),
+						...results.flatMap((r: R) => [`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)]),
 					]);
 					if ([-1001687785734].includes(parseInt(group.groupId as string))) {
 						// todo: use cloudflare r2 to store skip list
