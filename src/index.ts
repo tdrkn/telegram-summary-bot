@@ -1,5 +1,5 @@
 import TelegramBot, { TelegramApi } from '@codebam/cf-workers-telegram-bot';
-import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai';
+import { GenerationConfig, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory, SchemaType } from '@google/generative-ai';
 import telegramifyMarkdown from "telegramify-markdown"
 import { Buffer } from 'node:buffer';
 import { isJPEGBase64 } from './isJpeg';
@@ -100,6 +100,26 @@ function getGenModel(env: Env) {
 	const gateway_name = "telegram-summary-bot";
 	const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 	const account_id = env.account_id;
+	// TODO
+	const generationConfig: GenerationConfig = {
+		responseMimeType: "application/json",
+		responseSchema: {
+			type: SchemaType.OBJECT,
+			properties: {
+				text: {
+					type: SchemaType.STRING,
+				},
+				promptFeedback: {
+					type: SchemaType.OBJECT,
+					properties: {
+						blockReason: {
+							type: SchemaType.STRING,
+						},
+					},
+				},
+			},
+		},
+	}
 	const safetySettings = [
 		{
 			category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -119,7 +139,9 @@ function getGenModel(env: Env) {
 		},
 	];
 	return genAI.getGenerativeModel(
-		{ model, safetySettings },
+		{
+			model, safetySettings, // generationConfig
+		},
 		{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` }
 	);
 }
@@ -137,62 +159,52 @@ export default {
 		const { results: groups } = await env.DB.prepare('SELECT DISTINCT groupId FROM Messages').all();
 
 		for (const group of groups) {
-			try {
-				const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
-					.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
-					.all();
+			const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
+				.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
+				.all();
 
-				if (results.length > 0) {
-					const result = await getGenModel(env).generateContent([
-						`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+			if (results.length > 0) {
+				const result = await getGenModel(env).generateContent([
+					`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
 [关键字1](链接本体)
 [关键字2](链接本体)`,
-						`概括的开头是: 本日群聊总结如下：`,
-						//@ts-ignore
-						...results.flatMap((r: R) => [`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)]),
-					]);
-					if ([-1001687785734].includes(parseInt(group.groupId as string))) {
-						// todo: use cloudflare r2 to store skip list
-						continue;
-					}
+					`概括的开头是: 本日群聊总结如下：`,
+					//@ts-ignore
+					...results.flatMap((r: R) => [`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)]),
+				]);
+				if ([-1001687785734].includes(parseInt(group.groupId as string))) {
+					// todo: use cloudflare r2 to store skip list
+					continue;
+				}
 
-					// Use fetch to send message directly to Telegram API
-					const res = await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-						},
-						body: JSON.stringify({
-							chat_id: group.groupId,
-							text: processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')),
-							parse_mode: "MarkdownV2",
-						}),
-					});
-
-					if (!res.ok) {
-						console.error(`Error sending message to group ${group.groupId}:`, JSON.stringify(await res.json()));
-						return new Response('ok');
-					}
-					// Clean up old messages
-					await env.DB.prepare(`
+				// Use fetch to send message directly to Telegram API
+				const res = await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						chat_id: group.groupId,
+						text: processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')),
+						parse_mode: "MarkdownV2",
+					}),
+				});
+				// Clean up old messages
+				await env.DB.prepare(`
 						DELETE
 						FROM Messages
 						WHERE groupId=? AND timeStamp < ?`)
-						.bind(group.groupId, Date.now() - 30 * 24 * 60 * 60 * 1000)
-						.run();
-					// clean up old images
-					await env.DB.prepare(`
+					.bind(group.groupId, Date.now() - 30 * 24 * 60 * 60 * 1000)
+					.run();
+				// clean up old images
+				await env.DB.prepare(`
 						DELETE
 						FROM Messages
 						WHERE groupId=? AND timeStamp < ? AND content LIKE 'data:image/jpeg;base64,%'`)
-						.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
-						.run();
-				}
-			} catch (error) {
-				console.error(`Error processing group ${group.groupId}:`, error);
-				return new Response('ok');
+					.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
+					.run();
 			}
 		}
 		console.log("cron processed");
