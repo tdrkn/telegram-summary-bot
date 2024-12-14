@@ -173,9 +173,17 @@ export default {
 						WHERE row_num > 4000
 					);`)
 			.run();
-		const { results: groups } = await env.DB.prepare('SELECT DISTINCT groupId FROM Messages').all();
+		const { results: groups } = await env.DB.prepare(`
+			SELECT DISTINCT groupId
+			FROM Messages
+			ORDER BY groupId`).all();
 
-		for (const group of groups) {
+		const batch = Math.floor((new Date()).getUTCMinutes() / 10); // 0 <= batch < 6
+
+		for (const [id, group] of groups.entries()) {
+			if (id % 6 !== batch) {
+				continue;
+			}
 			const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
 				.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
 				.all();
