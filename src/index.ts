@@ -156,6 +156,23 @@ export default {
 		env: Env,
 		ctx: ExecutionContext,
 	) {
+		// Clean up oldest 4000 messages
+		await env.DB.prepare(`
+					DELETE FROM Messages
+					WHERE id IN (
+						SELECT id
+						FROM (
+							SELECT
+								id,
+								ROW_NUMBER() OVER (
+									PARTITION BY groupId
+									ORDER BY timeStamp DESC
+								) as row_num
+							FROM Messages
+						) ranked
+						WHERE row_num > 4000
+					);`)
+			.run();
 		const { results: groups } = await env.DB.prepare('SELECT DISTINCT groupId FROM Messages').all();
 
 		for (const group of groups) {
@@ -191,23 +208,6 @@ export default {
 						parse_mode: "MarkdownV2",
 					}),
 				});
-				// Clean up oldest 4000 messages
-				await env.DB.prepare(`
-						DELETE FROM Messages
-						WHERE id IN (
-							SELECT id
-							FROM (
-								SELECT
-									id,
-									ROW_NUMBER() OVER (
-										PARTITION BY groupId
-										ORDER BY timeStamp DESC
-									) as row_num
-								FROM Messages
-							) ranked
-							WHERE row_num > 4000
-						);`)
-					.run();
 				// clean up old images
 				await env.DB.prepare(`
 						DELETE
