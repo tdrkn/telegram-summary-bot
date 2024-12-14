@@ -191,12 +191,22 @@ export default {
 						parse_mode: "MarkdownV2",
 					}),
 				});
-				// Clean up old messages
+				// Clean up oldest 4000 messages
 				await env.DB.prepare(`
-						DELETE
-						FROM Messages
-						WHERE groupId=? AND timeStamp < ?`)
-					.bind(group.groupId, Date.now() - 30 * 24 * 60 * 60 * 1000)
+						DELETE FROM Messages
+						WHERE id IN (
+							SELECT id
+							FROM (
+								SELECT
+									id,
+									ROW_NUMBER() OVER (
+										PARTITION BY groupId
+										ORDER BY timeStamp DESC
+									) as row_num
+								FROM Messages
+							) ranked
+							WHERE row_num > 4000
+						);`)
 					.run();
 				// clean up old images
 				await env.DB.prepare(`
