@@ -142,7 +142,7 @@ function getGenModel(env: Env) {
 		{
 			model, safetySettings, // generationConfig
 		},
-		{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio` }
+		{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio`, timeout: 99999999999 }
 	);
 }
 
