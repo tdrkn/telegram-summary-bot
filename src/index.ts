@@ -156,6 +156,10 @@ export default {
 		env: Env,
 		ctx: ExecutionContext,
 	) {
+		await env.DB.prepare(`
+			CREATE INDEX IF NOT EXISTS idx_messages_groupid_timestamp
+			ON Messages(groupId, timeStamp DESC);
+		  `).run();
 		// Clean up oldest 4000 messages
 		await env.DB.prepare(`
 					DELETE FROM Messages
