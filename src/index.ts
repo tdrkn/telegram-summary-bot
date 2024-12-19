@@ -3,6 +3,7 @@ import { GenerationConfig, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory,
 import telegramifyMarkdown from "telegramify-markdown"
 import { Buffer } from 'node:buffer';
 import { isJPEGBase64 } from './isJpeg';
+import { extractAllOGInfo } from "./og"
 function dispatchContent(content: string) {
 	if (content.startsWith("data:image/jpeg;base64,")) {
 		return {
@@ -11,6 +12,9 @@ function dispatchContent(content: string) {
 				mimeType: "image/jpeg",
 			},
 		}
+	}
+	if (content.startsWith("http") && !content.includes(" ")) {
+		return extractAllOGInfo(content);
 	}
 	return content;
 }
