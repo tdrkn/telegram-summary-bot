@@ -19,7 +19,7 @@ export async function extractAllOGInfo(url: string): Promise<string> {
 			}
 		}
 		const rewriter = new HTMLRewriter().on('meta', new MetaHandler());
-		await rewriter.transform(response); // 使用 await 处理 Promise
+		await rewriter.transform(response).text(); // 使用 await 处理 Promise
 		let ret = "";
 		for (const [key, value] of ogData.entries()) {
 			ret += `${key}: ${value}\n`;
