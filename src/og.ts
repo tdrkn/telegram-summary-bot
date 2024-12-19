@@ -9,11 +9,20 @@ export async function extractAllOGInfo(url: string): Promise<string> {
 		class MetaHandler {
 			element(element: Element) {
 				const propertyValue = element.getAttribute("property");
+				// og
 				if (propertyValue?.startsWith("og:")) {
 					const contentValue = element.getAttribute("content");
 					if (contentValue) {
 						ogData.set(propertyValue.replace("og:", ""), contentValue);
 					}
+					element.remove();
+				}
+				// youtube
+				const name = element.getAttribute("name");
+				const contentValue = element.getAttribute("content");
+
+				if (name && contentValue) {
+					ogData.set(name, contentValue);
 					element.remove();
 				}
 			}
