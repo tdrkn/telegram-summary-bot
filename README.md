@@ -6,7 +6,7 @@
 
 Feel scared when seeing 2000+ unread in groups? Now you can read them by LLM!
 
-Use d1, cf worker, ai gateway, gemini-1.5-flash.
+Use d1, cf worker, ai gateway, gemini-2.0-flash.
 
 ## Setup
 
@@ -49,19 +49,19 @@ d1: telegram bot can't read info in the history, only newly sent info, so use da
 
 cf worker: so no more offline.(I hope so) [pricing](https://developers.cloudflare.com/workers/platform/pricing/#workers)
 
-gemini-1.5-flash: [free for limited usage and huge context](https://ai.google.dev/pricing?hl=zh-cn#1_5flash)
+gemini-2.0-flash: free for limited usage and huge context
 
 For openAI or others,use the `getGenModel` from `openai.ts`, fill in the keys, it returns `Promise<string>` so remember to `await`
 
 ---
 
-Data will be kept for 1 month, may change in the future.
+The Newest 4000 text messages will be kept, images will be kept for 2 days. May change in the future.
 
 ---
 
 ## TODO
 
-add method to import group history information so history info can be searched.
+~~add method to import group history information so history info can be searched.~~
 
 maybe auto-delte query result
 

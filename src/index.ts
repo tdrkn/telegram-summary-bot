@@ -150,6 +150,10 @@ function getCommandVar(str: string, delim: string) {
 	return str.slice(str.indexOf(delim) + delim.length);
 }
 
+function messageTemplate(s: string) {
+	return `下面由免费 gemini 2.0 概括群聊信息\n` + s + `本开源项目[地址](https://github.com/asukaminato0721/telegram-summary-bot)`;
+}
+
 export default {
 	async scheduled(
 		controller: ScheduledController,
@@ -216,7 +220,7 @@ export default {
 					},
 					body: JSON.stringify({
 						chat_id: group.groupId,
-						text: processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')),
+						text: processMarkdownLinks(telegramifyMarkdown(messageTemplate(result.response.text()), 'keep')),
 						parse_mode: "MarkdownV2",
 					}),
 				});
