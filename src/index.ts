@@ -4,7 +4,7 @@ import telegramifyMarkdown from "telegramify-markdown"
 import { Buffer } from 'node:buffer';
 import { isJPEGBase64 } from './isJpeg';
 import { extractAllOGInfo } from "./og"
-function dispatchContent(content: string) {
+async function dispatchContent(content: string) {
 	if (content.startsWith("data:image/jpeg;base64,")) {
 		return {
 			inlineData: {
@@ -14,7 +14,7 @@ function dispatchContent(content: string) {
 		}
 	}
 	if (content.startsWith("http") && !content.includes(" ")) {
-		return extractAllOGInfo(content);
+		return await extractAllOGInfo(content);
 	}
 	return content;
 }
@@ -208,9 +208,14 @@ export default {
 [关键字1](链接本体)
 [关键字2](链接本体)`,
 					`概括的开头是: 本日群聊总结如下：`,
-					//@ts-ignore
-					...results.flatMap((r: R) => [`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)]),
-				]);
+					...((await Promise.all(
+						results.map(
+							async (r: any) => [
+								`${r.userName}:`, await dispatchContent(r.content), getMessageLink(r)
+							]
+						)
+					)
+					).flat())]);
 				if ([-1001687785734].includes(parseInt(group.groupId as string))) {
 					// todo: use cloudflare r2 to store skip list
 					continue;
@@ -309,8 +314,18 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				try {
 					result = await getGenModel(env).generateContent([
 						`下面是一系列的对话, 格式是 用户名: 对话内容, 发送时间, 消息链接`,
-						//@ts-ignore
-						...results.flatMap((r: R) => [`${r.userName as string}: `, dispatchContent(r.content as string), getSendTime(r), getMessageLink(r)]),
+						...((
+							await Promise.all(
+								results.map(
+									async (r: any) => [
+										`${r.userName as string}: `,
+										await dispatchContent(r.content as string),
+										getSendTime(r),
+										getMessageLink(r)
+									]
+								)
+							)
+						).flat()),
 						`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
@@ -398,7 +413,16 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 [关键字1](链接本体)
 [关键字2](链接本体)`,
 								`群聊总结如下:`,
-								...results.flatMap((r: any) => [`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)]),
+								...
+								(
+									await Promise.all(
+										results.map(
+											async (r: any) => [
+												`${r.userName}:`, await dispatchContent(r.content), getMessageLink(r)
+											]
+										)
+									)
+								).flat(),
 							]
 						);
 						await bot.reply(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')), 'MarkdownV2');
