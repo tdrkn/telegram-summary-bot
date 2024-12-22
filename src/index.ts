@@ -332,7 +332,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 [关键字1](链接本体)
 [关键字2](链接本体), 在链接的两侧加空格`,
 						getCommandVar(messageText, " "),
-					]);
+					], { timeout: 99999999999 });
 				} catch (e) {
 					console.error(e);
 					return new Response('ok');
