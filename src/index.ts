@@ -155,7 +155,7 @@ function getCommandVar(str: string, delim: string) {
 }
 
 function messageTemplate(s: string) {
-	return `下面由免费 gemini 2.0 概括群聊信息\n` + s + `本开源项目[地址](https://github.com/asukaminato0721/telegram-summary-bot)`;
+	return `下面由免费 gemini 2.0 概括群聊信息\n` + s + `\n本开源项目[地址](https://github.com/asukaminato0721/telegram-summary-bot)`;
 }
 
 export default {
@@ -190,10 +190,10 @@ export default {
 			FROM Messages
 			ORDER BY groupId`).all();
 
-		const batch = Math.floor((new Date()).getUTCMinutes() / 10); // 0 <= batch < 6
+		const batch = Math.floor((new Date()).getUTCMinutes() / 6); // 0 <= batch < 6
 
 		for (const [id, group] of groups.entries()) {
-			if (id % 6 !== batch) {
+			if (id % 10 !== batch) {
 				continue;
 			}
 			const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
