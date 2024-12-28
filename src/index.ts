@@ -449,7 +449,11 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					case 'message': {
 						const msg = bot.update.message!;
 						const groupId = msg.chat.id;
-						const content = msg.text || "";
+						let content = msg.text || "";
+						const fwd = msg.forward_from?.last_name;
+						if (fwd) {
+							content = `转发自 ${fwd}: ${content}`;
+						}
 						const messageId = msg.message_id;
 						const groupName = msg.chat.title || "anonymous";
 						const timeStamp = Date.now();
