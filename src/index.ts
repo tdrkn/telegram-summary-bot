@@ -486,18 +486,23 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 							console.error("not a jpeg");
 							return new Response('ok');
 						}
-						await env.DB.prepare(`
+						try {
+							await env.DB.prepare(`
 							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-							.bind(
-								crypto.randomUUID(),
-								groupId,
-								timeStamp,
-								userName, // not interested in user id
-								"data:image/jpeg;base64," + Buffer.from(file).toString("base64"),
-								messageId,
-								groupName
-							)
-							.run();
+								.bind(
+									crypto.randomUUID(),
+									groupId,
+									timeStamp,
+									userName, // not interested in user id
+									"data:image/jpeg;base64," + Buffer.from(file).toString("base64"),
+									messageId,
+									groupName
+								)
+								.run();
+						}
+						catch (e) {
+							console.error(e);
+						}
 						return new Response('ok');
 					}
 				}
