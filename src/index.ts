@@ -4,7 +4,7 @@ import telegramifyMarkdown from "telegramify-markdown"
 import { Buffer } from 'node:buffer';
 import { isJPEGBase64 } from './isJpeg';
 import { extractAllOGInfo } from "./og"
-async function dispatchContent(content: string) {
+function dispatchContent(content: string) {
 	if (content.startsWith("data:image/jpeg;base64,")) {
 		return {
 			inlineData: {
@@ -12,9 +12,6 @@ async function dispatchContent(content: string) {
 				mimeType: "image/jpeg",
 			},
 		}
-	}
-	if (content.startsWith("http") && !content.includes(" ")) {
-		return await extractAllOGInfo(content);
 	}
 	return content;
 }
@@ -208,14 +205,12 @@ export default {
 [关键字1](链接本体)
 [关键字2](链接本体)`,
 					`概括的开头是: 本日群聊总结如下：`,
-					...((await Promise.all(
-						results.map(
-							async (r: any) => [
-								`${r.userName}:`, await dispatchContent(r.content), getMessageLink(r)
-							]
-						)
+					...results.flatMap(
+						(r: any) => [
+							`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)
+						]
 					)
-					).flat())]);
+				]);
 				if ([-1001687785734].includes(parseInt(group.groupId as string))) {
 					// todo: use cloudflare r2 to store skip list
 					continue;
@@ -314,18 +309,15 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				try {
 					result = await getGenModel(env).generateContent([
 						`下面是一系列的对话, 格式是 用户名: 对话内容, 发送时间, 消息链接`,
-						...((
-							await Promise.all(
-								results.map(
-									async (r: any) => [
-										`${r.userName as string}: `,
-										await dispatchContent(r.content as string),
-										getSendTime(r),
-										getMessageLink(r)
-									]
-								)
-							)
-						).flat()),
+						...results.flatMap(
+							(r: any) => [
+								`${r.userName as string}: `,
+								dispatchContent(r.content as string),
+								getSendTime(r),
+								getMessageLink(r)
+							]
+						)
+						,
 						`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
@@ -413,16 +405,12 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 [关键字1](链接本体)
 [关键字2](链接本体)`,
 								`群聊总结如下:`,
-								...
-								(
-									await Promise.all(
-										results.map(
-											async (r: any) => [
-												`${r.userName}:`, await dispatchContent(r.content), getMessageLink(r)
-											]
-										)
-									)
-								).flat(),
+								...results.flatMap(
+									(r: any) => [
+										`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)
+									]
+								)
+
 							]
 						);
 						await bot.reply(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')), 'MarkdownV2');
@@ -453,6 +441,9 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						const fwd = msg.forward_from?.last_name;
 						if (fwd) {
 							content = `转发自 ${fwd}: ${content}`;
+						}
+						if (content.startsWith("http") && !content.includes(" ")) {
+							content = await extractAllOGInfo(content);
 						}
 						const messageId = msg.message_id;
 						const groupName = msg.chat.title || "anonymous";
