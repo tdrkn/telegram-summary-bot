@@ -343,6 +343,11 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					reply_to_message_id: -1,
 				});
 				if (!res.ok) {
+					let reason = (await res.json() as any)?.promptFeedback?.blockReason;
+					if(reason){
+						await ctx.reply(`无法回答, 理由 ${reason}`);
+						return new Response('ok');
+					}
 					await ctx.reply(`发送失败`);
 				}
 				return new Response('ok');
