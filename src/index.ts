@@ -457,7 +457,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						await env.DB.prepare(`
 							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 							.bind(
-								crypto.randomUUID(),
+								getMessageLink({ groupId: groupId.toString(), messageId }),
 								groupId,
 								timeStamp,
 								userName, // not interested in user id
