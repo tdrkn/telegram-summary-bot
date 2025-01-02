@@ -154,7 +154,12 @@ function getCommandVar(str: string, delim: string) {
 function messageTemplate(s: string) {
 	return `下面由免费 gemini 2.0 概括群聊信息\n` + s + `\n本开源项目[地址](https://github.com/asukaminato0721/telegram-summary-bot)`;
 }
-
+function getUserName(msg: any) {
+	if (msg.from?.username === "Channel_Bot" && msg.from?.is_bot) {
+		return msg.sender_chat.title as string;
+	}
+	return msg.from?.first_name as string || "anonymous";
+}
 export default {
 	async scheduled(
 		controller: ScheduledController,
@@ -432,12 +437,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					await bot.reply('I am a bot, please add me to a group to use me.');
 					return new Response('ok');
 				}
-				function getUserName(msg: any) {
-					if (msg.from?.username === "Channel_Bot" && msg.from?.is_bot) {
-						return msg.sender_chat.title as string;
-					}
-					return msg.from?.first_name as string || "anonymous";
-				}
+
 				switch (bot.update_type) {
 					case 'message': {
 						const msg = bot.update.message!;
@@ -502,6 +502,28 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						return new Response('ok');
 					}
 				}
+				return new Response('ok');
+			})
+			.on(":edited_message", async (ctx) => {
+				const msg = ctx.update.edited_message!;
+				const groupId = msg.chat.id;
+				const content = msg.text || "";
+				const messageId = msg.message_id;
+				const groupName = msg.chat.title || "anonymous";
+				const timeStamp = Date.now();
+				const userName = getUserName(msg);
+				await env.DB.prepare(`
+					INSERT OR REPLACE INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+					.bind(
+						getMessageLink({ groupId: groupId.toString(), messageId }),
+						groupId,
+						timeStamp,
+						userName, // not interested in user id
+						content,
+						messageId,
+						groupName
+					)
+					.run();
 				return new Response('ok');
 			})
 			.handle(request.clone());
