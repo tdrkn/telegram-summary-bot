@@ -16,7 +16,7 @@ function dispatchContent(content: string) {
 	return content;
 }
 
-function getMessageLink(r: R) {
+function getMessageLink(r: { groupId: string, messageId: number }) {
 	return `https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId}`;
 }
 
@@ -344,7 +344,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				});
 				if (!res.ok) {
 					let reason = (await res.json() as any)?.promptFeedback?.blockReason;
-					if(reason){
+					if (reason) {
 						await ctx.reply(`无法回答, 理由 ${reason}`);
 						return new Response('ok');
 					}
@@ -486,7 +486,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 							await env.DB.prepare(`
 							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 								.bind(
-									crypto.randomUUID(),
+									getMessageLink({ groupId: groupId.toString(), messageId }),
 									groupId,
 									timeStamp,
 									userName, // not interested in user id
