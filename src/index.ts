@@ -208,7 +208,7 @@ export default {
 			if (id % 10 !== batch) {
 				continue;
 			}
-			const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC LIMIT 2000')
+			const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC')
 				.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
 				.all();
 
@@ -396,7 +396,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						FROM Messages
 						WHERE groupId=? AND timeStamp >= ?
 						ORDER BY timeStamp ASC
-						LIMIT 2000`)
+						`)
 						.bind(groupId, Date.now() - parseInt(summary) * 60 * 60 * 1000)
 						.all()).results;
 				}
@@ -411,7 +411,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						SELECT * FROM latest_n
 						ORDER BY timeStamp ASC
 						`)
-						.bind(groupId, Math.min(parseInt(summary), 2000))
+						.bind(groupId, Math.min(parseInt(summary), 4000))
 						.all()).results;
 				}
 				if (results.length > 0) {
