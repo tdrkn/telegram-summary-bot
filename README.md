@@ -8,6 +8,10 @@ Feel scared when seeing 2000+ unread in groups? Now you can read them by LLM!
 
 Use d1, cf worker, ai gateway, gemini-2.0-flash.
 
+## NOTICE
+
+Due to current usage exceeded maximum DB size 500M `D1_ERROR: Exceeded maximum DB size`, please deploy your own bot. And you can keep a much longer log. I have disabled this bot to be add to new group.
+
 ## Setup
 
 bot: <https://github.com/codebam/cf-workers-telegram-bot>
