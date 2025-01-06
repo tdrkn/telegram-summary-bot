@@ -188,9 +188,19 @@ export default {
 					);`)
 			.run();
 		const { results: groups } = await env.DB.prepare(`
-			SELECT DISTINCT groupId
+		WITH MessageCounts AS (
+			SELECT
+				groupId,
+				COUNT(*) as message_count
 			FROM Messages
-			ORDER BY groupId`).all();
+			WHERE timeStamp >= ?1 - (24 * 3600 * 1000)
+			GROUP BY groupId
+		)
+		SELECT groupId, message_count
+		FROM MessageCounts
+		WHERE message_count > 10
+		ORDER BY message_count DESC;
+		`).bind(Date.now()).all();
 
 		const batch = Math.floor((new Date()).getUTCMinutes() / 6); // 0 <= batch < 6
 
@@ -202,45 +212,44 @@ export default {
 				.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
 				.all();
 
-			if (results.length > 10) {
-				const result = await getGenModel(env).generateContent([
-					`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+
+			const result = await getGenModel(env).generateContent([
+				`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
 [关键字1](链接本体)
 [关键字2](链接本体)`,
-					`概括的开头是: 本日群聊总结如下：`,
-					...results.flatMap(
-						(r: any) => [
-							`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)
-						]
-					)
-				]);
-				if ([-1001687785734].includes(parseInt(group.groupId as string))) {
-					// todo: use cloudflare r2 to store skip list
-					continue;
-				}
+				`概括的开头是: 本日群聊总结如下：`,
+				...results.flatMap(
+					(r: any) => [
+						`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)
+					]
+				)
+			]);
+			if ([-1001687785734].includes(parseInt(group.groupId as string))) {
+				// todo: use cloudflare r2 to store skip list
+				continue;
+			}
 
-				// Use fetch to send message directly to Telegram API
-				const res = await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						chat_id: group.groupId,
-						text: processMarkdownLinks(telegramifyMarkdown(messageTemplate(result.response.text()), 'keep')),
-						parse_mode: "MarkdownV2",
-					}),
-				});
-				// clean up old images
-				await env.DB.prepare(`
+			// Use fetch to send message directly to Telegram API
+			const res = await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					chat_id: group.groupId,
+					text: processMarkdownLinks(telegramifyMarkdown(messageTemplate(result.response.text()), 'keep')),
+					parse_mode: "MarkdownV2",
+				}),
+			});
+			// clean up old images
+			await env.DB.prepare(`
 						DELETE
 						FROM Messages
 						WHERE groupId=? AND timeStamp < ? AND content LIKE 'data:image/jpeg;base64,%'`)
-					.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
-					.run();
-			}
+				.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
+				.run();
 		}
 		console.log("cron processed");
 	},
