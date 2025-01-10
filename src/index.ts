@@ -187,7 +187,15 @@ export default {
 						WHERE row_num > 4000
 					);`)
 			.run();
-		const { results: groups } = await env.DB.prepare(`
+		const cache = caches.default;
+		const cacheKey = new Request(`https://dummy-url/${env.SECRET_TELEGRAM_API_TOKEN}`);
+		const cachedResponse = await cache.match(cacheKey);
+		let groups: any[] = [];
+		if (cachedResponse) {
+			groups = await cachedResponse.json();
+		}
+		else {
+			results: groups = (await env.DB.prepare(`
 		WITH MessageCounts AS (
 			SELECT
 				groupId,
@@ -200,12 +208,19 @@ export default {
 		FROM MessageCounts
 		WHERE message_count > 10
 		ORDER BY message_count DESC;
-		`).bind(Date.now()).all();
+		`).bind(Date.now()).all()).results;
+			await cache.put(cacheKey, new Response(JSON.stringify(groups), {
+				headers: {
+					'content-type': 'application/json',
+					"Cache-Control": "max-age=10000", // > 7200 < 86400
+				},
+			}));
+		}
 
-		const batch = Math.floor((new Date()).getUTCMinutes() / 6); // 0 <= batch < 6
+		const batch = (new Date()).getUTCHours() * 10 + Math.floor((new Date()).getUTCMinutes() / 6); // 0 <= batch < 20
 
 		for (const [id, group] of groups.entries()) {
-			if (id % 10 !== batch) {
+			if (id % 20 !== batch) {
 				continue;
 			}
 			const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC')
