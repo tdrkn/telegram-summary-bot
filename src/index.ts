@@ -195,7 +195,7 @@ export default {
 			groups = await cachedResponse.json();
 		}
 		else {
-			results: groups = (await env.DB.prepare(`
+			groups = (await env.DB.prepare(`
 		WITH MessageCounts AS (
 			SELECT
 				groupId,
