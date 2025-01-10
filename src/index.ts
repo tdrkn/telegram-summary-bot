@@ -166,6 +166,8 @@ export default {
 		env: Env,
 		ctx: ExecutionContext,
 	) {
+		console.debug("Scheduled task starting:", new Date().toISOString());
+
 		await env.DB.prepare(`
 			CREATE INDEX IF NOT EXISTS idx_messages_groupid_timestamp
 			ON Messages(groupId, timeStamp DESC);
@@ -213,13 +215,14 @@ export default {
 				cache.put(cacheKey, new Response(JSON.stringify(groups), {
 					headers: {
 						'content-type': 'application/json',
-						"Cache-Control": "max-age=10000", // > 7200 < 86400
+						"Cache-Control": "s-maxage=10000", // > 7200 < 86400
 					},
 				})));
 		}
 
 		const batch = (new Date()).getUTCHours() * 10 + Math.floor((new Date()).getUTCMinutes() / 6); // 0 <= batch < 20
 
+		console.debug("Found groups:", groups.length);
 		for (const [id, group] of groups.entries()) {
 			if (id % 20 !== batch) {
 				continue;
