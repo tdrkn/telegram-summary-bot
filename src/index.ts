@@ -167,13 +167,10 @@ export default {
 		ctx: ExecutionContext,
 	) {
 		console.debug("Scheduled task starting:", new Date().toISOString());
-
-		await env.DB.prepare(`
-			CREATE INDEX IF NOT EXISTS idx_messages_groupid_timestamp
-			ON Messages(groupId, timeStamp DESC);
-		  `).run();
+		const date = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Shanghai" }));
 		// Clean up oldest 4000 messages
-		await env.DB.prepare(`
+		if (date.getHours() === 0 && date.getMinutes() < 5) {
+			await env.DB.prepare(`
 					DELETE FROM Messages
 					WHERE id IN (
 						SELECT id
@@ -188,7 +185,8 @@ export default {
 						) ranked
 						WHERE row_num > 4000
 					);`)
-			.run();
+				.run();
+		}
 		const cache = caches.default;
 		const cacheKey = new Request(`https://dummy-url/${env.SECRET_TELEGRAM_API_TOKEN}`);
 		const cachedResponse = await cache.match(cacheKey);
@@ -221,7 +219,6 @@ export default {
 					},
 				})));
 		}
-		const date = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Shanghai" }));
 		const batch = (date.getHours() * 10 + Math.floor(date.getMinutes() / 6)) % 20;  // 0 <= batch < 20
 
 		console.debug("Batch:", batch);
@@ -268,14 +265,16 @@ export default {
 				}),
 			});
 			// clean up old images
-			ctx.waitUntil(env.DB.prepare(`
+			if (date.getHours() === 0 && date.getMinutes() < 5) {
+				ctx.waitUntil(env.DB.prepare(`
 						DELETE
 						FROM Messages
 						WHERE groupId=? AND timeStamp < ? AND content LIKE 'data:image/jpeg;base64,%'`)
-				.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
-				.run());
+					.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
+					.run());
+			}
 		}
-		console.log("cron processed");
+		console.debug("cron processed");
 	},
 	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
 		await new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN)
@@ -487,7 +486,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						const groupName = msg.chat.title || "anonymous";
 						const timeStamp = Date.now();
 						const userName = getUserName(msg);
-						try{
+						try {
 							await env.DB.prepare(`
 								INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 								.bind(
@@ -550,19 +549,19 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				const groupName = msg.chat.title || "anonymous";
 				const timeStamp = Date.now();
 				const userName = getUserName(msg);
-				try{
-				await env.DB.prepare(`
+				try {
+					await env.DB.prepare(`
 					INSERT OR REPLACE INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-					.bind(
-						getMessageLink({ groupId: groupId.toString(), messageId }),
-						groupId,
-						timeStamp,
-						userName, // not interested in user id
-						content,
-						messageId,
-						groupName
-					)
-					.run();
+						.bind(
+							getMessageLink({ groupId: groupId.toString(), messageId }),
+							groupId,
+							timeStamp,
+							userName, // not interested in user id
+							content,
+							messageId,
+							groupName
+						)
+						.run();
 				}
 				catch (e) {
 					console.error(e);
