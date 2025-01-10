@@ -194,9 +194,11 @@ export default {
 		const cachedResponse = await cache.match(cacheKey);
 		let groups: any[] = [];
 		if (cachedResponse) {
+			console.debug("Using cached response");
 			groups = await cachedResponse.json();
 		}
 		else {
+			console.debug("Fetching groups");
 			groups = (await env.DB.prepare(`
 		WITH MessageCounts AS (
 			SELECT
@@ -207,7 +209,7 @@ export default {
 			GROUP BY groupId
 		)
 		SELECT groupId, message_count
-		FROM MessageCounts
+		FROM MessageCountsc
 		WHERE message_count > 10
 		ORDER BY message_count DESC;
 		`).bind(Date.now()).all()).results;
@@ -219,14 +221,16 @@ export default {
 					},
 				})));
 		}
+		const date = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Shanghai" }));
+		const batch = (date.getHours() * 10 + Math.floor(date.getMinutes() / 6)) % 20;  // 0 <= batch < 20
 
-		const batch = (new Date()).getUTCHours() * 10 + Math.floor((new Date()).getUTCMinutes() / 6); // 0 <= batch < 20
-
-		console.debug("Found groups:", groups.length);
+		console.debug("Batch:", batch);
+		console.debug("Found groups:", groups.length, JSON.stringify(groups));
 		for (const [id, group] of groups.entries()) {
 			if (id % 20 !== batch) {
 				continue;
 			}
+			console.debug(`Processing group ${id + 1}/${groups.length}: ${group.groupId}`);
 			const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC')
 				.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
 				.all();
@@ -249,6 +253,7 @@ export default {
 				// todo: use cloudflare r2 to store skip list
 				continue;
 			}
+			console.debug("send message to", group.groupId);
 
 			// Use fetch to send message directly to Telegram API
 			const res = await fetch(`https://api.telegram.org/bot${env.SECRET_TELEGRAM_API_TOKEN}/sendMessage`, {
@@ -482,18 +487,23 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						const groupName = msg.chat.title || "anonymous";
 						const timeStamp = Date.now();
 						const userName = getUserName(msg);
-						await env.DB.prepare(`
-							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-							.bind(
-								getMessageLink({ groupId: groupId.toString(), messageId }),
-								groupId,
-								timeStamp,
-								userName, // not interested in user id
-								content,
-								messageId,
-								groupName
-							)
-							.run();
+						try{
+							await env.DB.prepare(`
+								INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+								.bind(
+									getMessageLink({ groupId: groupId.toString(), messageId }),
+									groupId,
+									timeStamp,
+									userName, // not interested in user id
+									content,
+									messageId,
+									groupName
+								)
+								.run();
+						}
+						catch (e) {
+							console.error(e);
+						}
 						return new Response('ok');
 
 					}
@@ -512,7 +522,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						}
 						try {
 							await env.DB.prepare(`
-							INSERT INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+							INSERT OR REPLACE INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 								.bind(
 									getMessageLink({ groupId: groupId.toString(), messageId }),
 									groupId,
@@ -540,6 +550,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				const groupName = msg.chat.title || "anonymous";
 				const timeStamp = Date.now();
 				const userName = getUserName(msg);
+				try{
 				await env.DB.prepare(`
 					INSERT OR REPLACE INTO Messages(id, groupId, timeStamp, userName, content, messageId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 					.bind(
@@ -552,6 +563,10 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						groupName
 					)
 					.run();
+				}
+				catch (e) {
+					console.error(e);
+				}
 				return new Response('ok');
 			})
 			.handle(request.clone());
