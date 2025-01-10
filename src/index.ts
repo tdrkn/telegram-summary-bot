@@ -209,12 +209,13 @@ export default {
 		WHERE message_count > 10
 		ORDER BY message_count DESC;
 		`).bind(Date.now()).all()).results;
-			await cache.put(cacheKey, new Response(JSON.stringify(groups), {
-				headers: {
-					'content-type': 'application/json',
-					"Cache-Control": "max-age=10000", // > 7200 < 86400
-				},
-			}));
+			ctx.waitUntil(
+				cache.put(cacheKey, new Response(JSON.stringify(groups), {
+					headers: {
+						'content-type': 'application/json',
+						"Cache-Control": "max-age=10000", // > 7200 < 86400
+					},
+				})));
 		}
 
 		const batch = (new Date()).getUTCHours() * 10 + Math.floor((new Date()).getUTCMinutes() / 6); // 0 <= batch < 20
@@ -259,12 +260,12 @@ export default {
 				}),
 			});
 			// clean up old images
-			await env.DB.prepare(`
+			ctx.waitUntil(env.DB.prepare(`
 						DELETE
 						FROM Messages
 						WHERE groupId=? AND timeStamp < ? AND content LIKE 'data:image/jpeg;base64,%'`)
 				.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
-				.run();
+				.run());
 		}
 		console.log("cron processed");
 	},
