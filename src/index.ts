@@ -207,7 +207,7 @@ export default {
 			GROUP BY groupId
 		)
 		SELECT groupId, message_count
-		FROM MessageCountsc
+		FROM MessageCounts
 		WHERE message_count > 10
 		ORDER BY message_count DESC;
 		`).bind(Date.now()).all()).results;
