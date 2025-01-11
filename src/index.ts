@@ -264,15 +264,15 @@ export default {
 					parse_mode: "MarkdownV2",
 				}),
 			});
-			// clean up old images
-			if (date.getHours() === 0 && date.getMinutes() < 5) {
-				ctx.waitUntil(env.DB.prepare(`
-						DELETE
-						FROM Messages
-						WHERE groupId=? AND timeStamp < ? AND content LIKE 'data:image/jpeg;base64,%'`)
-					.bind(group.groupId, Date.now() - 2 * 24 * 60 * 60 * 1000)
-					.run());
-			}
+		}
+		// clean up old images
+		if (date.getHours() === 0 && date.getMinutes() < 5) {
+			ctx.waitUntil(env.DB.prepare(`
+					DELETE
+					FROM Messages
+					WHERE timeStamp < ? AND content LIKE 'data:image/jpeg;base64,%'`)
+				.bind(Date.now() - 24 * 60 * 60 * 1000)
+				.run());
 		}
 		console.debug("cron processed");
 	},
