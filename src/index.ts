@@ -23,6 +23,7 @@ function getMessageLink(r: { groupId: string, messageId: number }) {
 function getSendTime(r: R) {
 	return new Date(r.timeStamp).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 }
+const cutTo2000 = (s: string) => s.length <= 2000 ? s : s.slice(0, 2000);
 /**
  * 将数字转换为上标数字
  * @param {number} num - 要转换的数字
@@ -234,7 +235,7 @@ export default {
 
 
 			const result = await getGenModel(env).generateContent([
-				`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+				`用符合风格的语气概括下面的对话, 不得超过 2000 字, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
 [关键字1](链接本体)
@@ -260,7 +261,7 @@ export default {
 				},
 				body: JSON.stringify({
 					chat_id: group.groupId,
-					text: processMarkdownLinks(telegramifyMarkdown(messageTemplate(result.response.text()), 'keep')),
+					text: cutTo2000(processMarkdownLinks(telegramifyMarkdown(messageTemplate(result.response.text()), 'keep'))),
 					parse_mode: "MarkdownV2",
 				}),
 			});
@@ -455,7 +456,9 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 
 							]
 						);
-						await bot.reply(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')), 'MarkdownV2');
+						await bot.reply(
+							cutTo2000(
+								processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep'))), 'MarkdownV2');
 					}
 					catch (e) {
 						console.error(e);
