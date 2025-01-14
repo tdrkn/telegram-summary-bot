@@ -102,47 +102,28 @@ function getGenModel(env: Env) {
 	const gateway_name = "telegram-summary-bot";
 	const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 	const account_id = env.account_id;
-	// TODO
-	const generationConfig: GenerationConfig = {
-		responseMimeType: "application/json",
-		responseSchema: {
-			type: SchemaType.OBJECT,
-			properties: {
-				text: {
-					type: SchemaType.STRING,
-				},
-				promptFeedback: {
-					type: SchemaType.OBJECT,
-					properties: {
-						blockReason: {
-							type: SchemaType.STRING,
-						},
-					},
-				},
-			},
-		},
-	}
+	// https://www.reddit.com/r/Bard/comments/1i14ko9/quite_literally_everything_is_getting_censored/
 	const safetySettings = [
 		{
 			category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-			threshold: HarmBlockThreshold.BLOCK_NONE,
+			threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
 		},
 		{
 			category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-			threshold: HarmBlockThreshold.BLOCK_NONE,
+			threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
 		},
 		{
 			category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-			threshold: HarmBlockThreshold.BLOCK_NONE,
+			threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
 		},
 		{
 			category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-			threshold: HarmBlockThreshold.BLOCK_NONE,
+			threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
 		},
 	];
 	return genAI.getGenerativeModel(
 		{
-			model, safetySettings, // generationConfig
+			model, safetySettings,
 		},
 		{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio`, timeout: 99999999999 }
 	);
