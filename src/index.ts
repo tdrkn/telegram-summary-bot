@@ -165,7 +165,7 @@ export default {
 								) as row_num
 							FROM Messages
 						) ranked
-						WHERE row_num > 4000
+						WHERE row_num > 3000
 					);`)
 				.run();
 		}
@@ -201,7 +201,7 @@ export default {
 					},
 				})));
 		}
-		const batch = (date.getHours() * 10 + Math.floor(date.getMinutes() / 6)) % 20;  // 0 <= batch < 20
+		const batch = Math.floor(date.getMinutes() / 6);  // 0 <= batch < 10
 
 		console.debug("Batch:", batch);
 		console.debug("Found groups:", groups.length, JSON.stringify(groups));
