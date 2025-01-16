@@ -206,7 +206,7 @@ export default {
 		console.debug("Batch:", batch);
 		console.debug("Found groups:", groups.length, JSON.stringify(groups));
 		for (const [id, group] of groups.entries()) {
-			if (id % 20 !== batch) {
+			if (id % 10 !== batch) {
 				continue;
 			}
 			console.debug(`Processing group ${id + 1}/${groups.length}: ${group.groupId}`);
