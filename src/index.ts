@@ -121,11 +121,11 @@ function getGenModel(env: Env) {
 			threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
 		},
 	];
+	const generationConfig = {
+		maxOutputTokens: 4096,
+	};
 	return genAI.getGenerativeModel(
-		{
-			model, safetySettings,
-		},
-		{ baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio`, timeout: 99999999999 }
+		{ model, safetySettings, generationConfig }, { baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio`, timeout: 99999999999 }
 	);
 }
 
@@ -216,7 +216,7 @@ export default {
 
 
 			const result = await getGenModel(env).generateContent([
-				`用符合风格的语气概括下面的对话, 不得超过 1000 字, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+				`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
 [关键字1](链接本体)
@@ -423,7 +423,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					try {
 						const result = await getGenModel(env).generateContent(
 							[
-								`用符合风格的语气概括下面的对话, 不得超过 1000 字, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+								`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
 [关键字1](链接本体)
