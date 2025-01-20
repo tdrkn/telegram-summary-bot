@@ -1,6 +1,7 @@
 import TelegramBot, { TelegramApi } from '@codebam/cf-workers-telegram-bot';
 import { GenerationConfig, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory, SchemaType } from '@google/generative-ai';
 import telegramifyMarkdown from "telegramify-markdown"
+//@ts-ignore
 import { Buffer } from 'node:buffer';
 import { isJPEGBase64 } from './isJpeg';
 import { extractAllOGInfo } from "./og"
@@ -43,7 +44,11 @@ export function toSuperscript(num: number) {
 		'9': '⁹'
 	};
 
-	return String(num).split('').map(digit => superscripts[digit]).join('');
+	return num
+		.toString()
+		.split('')
+		.map(digit => superscripts[digit as keyof typeof superscripts])
+		.join('');
 }
 /**
  * 处理 Markdown 文本中的重复链接，将其转换为顺序编号的格式
