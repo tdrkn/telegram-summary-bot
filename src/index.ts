@@ -464,8 +464,12 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						const groupId = msg.chat.id;
 						let content = msg.text || "";
 						const fwd = msg.forward_from?.last_name;
+						const replyTo = msg.reply_to_message?.message_id;
 						if (fwd) {
 							content = `转发自 ${fwd}: ${content}`;
+						}
+						if (replyTo) {
+							content = `回复 ${getMessageLink({ groupId: groupId.toString(), messageId: replyTo })}: ${content}`;
 						}
 						if (content.startsWith("http") && !content.includes(" ")) {
 							content = await extractAllOGInfo(content);
