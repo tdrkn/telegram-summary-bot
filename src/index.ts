@@ -103,7 +103,7 @@ type R = {
 }
 
 function getGenModel(env: Env) {
-	const model = "gemini-2.0-flash-exp";
+	const model = "gemini-2.0-flash";
 	const gateway_name = "telegram-summary-bot";
 	const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 	const account_id = env.account_id;
