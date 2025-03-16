@@ -142,7 +142,7 @@ function messageTemplate(s: string) {
 	return `下面由免费 gemini 2.0 概括群聊信息\n` + s + `\n本开源项目[地址](https://github.com/asukaminato0721/telegram-summary-bot)`;
 }
 function getUserName(msg: any) {
-	if (msg.from?.username === "Channel_Bot" && msg.from?.is_bot) {
+	if (msg?.sender_chat?.title){
 		return msg.sender_chat.title as string;
 	}
 	return msg.from?.first_name as string || "anonymous";
