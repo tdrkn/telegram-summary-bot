@@ -142,7 +142,7 @@ function messageTemplate(s: string) {
 	return `下面由免费 gemini 2.0 概括群聊信息\n` + s + `\n本开源项目[地址](https://github.com/asukaminato0721/telegram-summary-bot)`;
 }
 function getUserName(msg: any) {
-	if (msg?.sender_chat?.title){
+	if (msg?.sender_chat?.title) {
 		return msg.sender_chat.title as string;
 	}
 	return msg.from?.first_name as string || "anonymous";
@@ -221,7 +221,13 @@ export default {
 
 
 			const result = await getGenModel(env).generateContent([
-				`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+				`用符合风格的语气概括下面的对话, 对话格式为
+====================
+用户名:
+发言内容
+相应链接
+====================
+如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
 [关键字1](链接本体)
@@ -229,7 +235,8 @@ export default {
 				`概括的开头是: 本日群聊总结如下：`,
 				...results.flatMap(
 					(r: any) => [
-						`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)
+						`====================`,
+						`${r.userName}:`, dispatchContent(r.content), getMessageLink(r),
 					]
 				)
 			]);
@@ -332,9 +339,16 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				let result;
 				try {
 					result = await getGenModel(env).generateContent([
-						`下面是一系列的对话, 格式是 用户名: 对话内容, 发送时间, 消息链接`,
+						`下面是一系列的对话, 格式是
+====================
+用户名:
+发言内容
+相应链接
+====================						
+`,
 						...results.flatMap(
 							(r: any) => [
+								`====================`,
 								`${r.userName as string}: `,
 								dispatchContent(r.content as string),
 								getSendTime(r),
@@ -428,7 +442,13 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					try {
 						const result = await getGenModel(env).generateContent(
 							[
-								`用符合风格的语气概括下面的对话, 对话格式为 用户名: 发言内容, 相应链接, 如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
+								`用符合风格的语气概括下面的对话, 对话格式为
+====================
+用户名:
+发言内容
+相应链接
+====================
+如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
 [引用1](链接本体)
 [引用2](链接本体)
 [关键字1](链接本体)
@@ -436,6 +456,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 								`群聊总结如下:`,
 								...results.flatMap(
 									(r: any) => [
+										"====================",
 										`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)
 									]
 								)
