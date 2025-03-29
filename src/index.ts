@@ -25,6 +25,16 @@ function getSendTime(r: R) {
 	return new Date(r.timeStamp).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 }
 
+function escapeMarkdownV2(text: string) {
+	// 注意：反斜杠 \ 本身也需要转义，所以正则表达式中是 \\\\
+	// 或者直接在字符串中使用 \
+	const reservedChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
+	// 正则表达式需要转义特殊字符
+	const escapedChars = reservedChars.map(char => '\\' + char).join('');
+	const regex = new RegExp(`([${escapedChars}])`, 'g');
+	return text.replace(regex, '\\$1');
+  }
+
 /**
  * 将数字转换为上标数字
  * @param {number} num - 要转换的数字
@@ -297,8 +307,8 @@ export default {
 					.bind(groupId, `*${messageText.split(" ")[1]}*`)
 					.all();
 				const res = (await ctx.reply(
-					telegramifyMarkdown(`查询结果:
-${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, 'keep'), "MarkdownV2"))!;
+					escapeMarkdownV2(`查询结果:
+${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`), "MarkdownV2"))!;
 				if (!res.ok) {
 					console.error(`Error sending message:`, res.status, res.statusText, await res.text());
 				}
