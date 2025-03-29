@@ -296,8 +296,9 @@ export default {
 					LIMIT 2000`)
 					.bind(groupId, `*${messageText.split(" ")[1]}*`)
 					.all();
-				const res = (await ctx.reply(`查询结果:
-${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, "MarkdownV2"))!;
+				const res = (await ctx.reply(
+					telegramifyMarkdown(`查询结果:
+${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`, 'keep'), "MarkdownV2"))!;
 				if (!res.ok) {
 					console.error(`Error sending message:`, res.status, res.statusText, await res.text());
 				}
