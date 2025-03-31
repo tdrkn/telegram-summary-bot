@@ -112,7 +112,7 @@ type R = {
 	timeStamp: number;
 }
 
-function getGenModel(env: Env) {
+function getGenModel(env: Env, systemInstruction: string) {
 	const model = "gemini-2.0-flash";
 	const gateway_name = "telegram-summary-bot";
 	const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
@@ -140,9 +140,44 @@ function getGenModel(env: Env) {
 		maxOutputTokens: 4096,
 	};
 	return genAI.getGenerativeModel(
-		{ model, safetySettings, generationConfig }, { baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio`, timeout: 99999999999 }
+		{ model, safetySettings, generationConfig, systemInstruction }, { baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio`, timeout: 99999999999 }
 	);
 }
+
+// System prompts for different scenarios
+const SYSTEM_PROMPTS = {
+	summarizeChat: `你是一个专业的群聊概括助手。你的任务是用符合群聊风格的语气概括对话内容。
+对话将按以下格式提供：
+====================
+用户名:
+发言内容
+相应链接
+====================
+
+请遵循以下指南：
+1. 如果对话包含多个主题，请分条概括
+2. 如果对话中提到图片，请在概括中包含相关内容描述
+3. 在回答中用markdown格式引用原对话的链接
+4. 链接格式应为：[引用1](链接本体)、[关键字1](链接本体)等
+5. 概括要简洁明了，捕捉对话的主要内容和情绪
+6. 概括的开头使用"本日群聊总结如下："`,
+
+	answerQuestion: `你是一个群聊智能助手。你的任务是基于提供的群聊记录回答用户的问题。
+群聊记录将按以下格式提供：
+====================
+用户名:
+发言内容
+相应链接
+====================
+
+请遵循以下指南：
+1. 用符合群聊风格的语气回答问题
+2. 在回答中引用相关的原始消息作为依据
+3. 使用markdown格式引用原对话，格式为：[引用1](链接本体)、[关键字1](链接本体)
+4. 在链接两侧添加空格
+5. 如果找不到相关信息，请诚实说明
+6. 回答应该简洁但内容完整`
+};
 
 function getCommandVar(str: string, delim: string) {
 	return str.slice(str.indexOf(delim) + delim.length);
@@ -229,27 +264,16 @@ export default {
 				.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
 				.all();
 
-
-			const result = await getGenModel(env).generateContent([
-				`用符合风格的语气概括下面的对话, 对话格式为
-====================
-用户名:
-发言内容
-相应链接
-====================
-如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
-[引用1](链接本体)
-[引用2](链接本体)
-[关键字1](链接本体)
-[关键字2](链接本体)`,
-				`概括的开头是: 本日群聊总结如下：`,
-				...results.flatMap(
+			const result = await getGenModel(env, SYSTEM_PROMPTS.summarizeChat)
+			.startChat()
+			.sendMessage(
+				results.flatMap(
 					(r: any) => [
 						`====================`,
 						`${r.userName}:`, dispatchContent(r.content), getMessageLink(r),
 					]
 				)
-			]);
+			);
 			if ([-1001687785734].includes(parseInt(group.groupId as string))) {
 				// todo: use cloudflare r2 to store skip list
 				continue;
@@ -349,31 +373,23 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					.all();
 				let result;
 				try {
-					result = await getGenModel(env).generateContent([
-						`下面是一系列的对话, 格式是
-====================
-用户名:
-发言内容
-相应链接
-====================						
-`,
-						...results.flatMap(
-							(r: any) => [
-								`====================`,
-								`${r.userName as string}: `,
-								dispatchContent(r.content as string),
-								getSendTime(r),
-								getMessageLink(r)
-							]
-						)
-						,
-						`基于上面的记录, 用符合上文风格的语气回答这个问题, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
-[引用1](链接本体)
-[引用2](链接本体)
-[关键字1](链接本体)
-[关键字2](链接本体), 在链接的两侧加空格`,
-						getCommandVar(messageText, " "),
-					], { timeout: 99999999999 });
+					result = await getGenModel(env, SYSTEM_PROMPTS.answerQuestion)
+					.startChat()
+					.sendMessage(
+					 [
+								...results.flatMap(
+									(r: any) => [
+										`====================`,
+										`${r.userName as string}: `,
+										dispatchContent(r.content as string),
+										getSendTime(r),
+										getMessageLink(r)
+									]
+								),
+								`问题：${getCommandVar(messageText, " ")}`
+							
+					]
+					);
 				} catch (e) {
 					console.error(e);
 					return new Response('ok');
@@ -451,28 +467,17 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				}
 				if (results.length > 0) {
 					try {
-						const result = await getGenModel(env).generateContent(
-							[
-								`用符合风格的语气概括下面的对话, 对话格式为
-====================
-用户名:
-发言内容
-相应链接
-====================
-如果对话里出现了多个主题, 请分条概括, 涉及到的图片也要提到相关内容, 并在回答的关键词中用 markdown 的格式引用原对话的链接, 格式为
-[引用1](链接本体)
-[引用2](链接本体)
-[关键字1](链接本体)
-[关键字2](链接本体)`,
-								`群聊总结如下:`,
-								...results.flatMap(
-									(r: any) => [
-										"====================",
-										`${r.userName}:`, dispatchContent(r.content), getMessageLink(r)
-									]
-								)
-
-							]
+						const result = await getGenModel(env, SYSTEM_PROMPTS.summarizeChat)
+						.startChat()
+						.sendMessage(
+							results.flatMap(
+								(r: any) => [
+									"====================",
+									`${r.userName}:`,
+									dispatchContent(r.content),
+									getMessageLink(r)
+								]
+							)
 						);
 						await bot.reply(
 							processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')), 'MarkdownV2');
