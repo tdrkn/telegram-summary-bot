@@ -293,7 +293,7 @@ export default {
 				},
 				body: JSON.stringify({
 					chat_id: group.groupId,
-					text: processMarkdownLinks(telegramifyMarkdown(messageTemplate(foldText(result.response.text())), 'keep')),
+					text: foldText(processMarkdownLinks(telegramifyMarkdown(messageTemplate((result.response.text())), 'keep'))),
 					parse_mode: "MarkdownV2",
 				}),
 			});
@@ -409,7 +409,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
 					"chat_id": userId,
 					"parse_mode": "MarkdownV2",
-					"text": response_text,
+					"text": foldText(response_text),
 					reply_to_message_id: -1,
 				});
 				if (!res.ok) {
@@ -485,7 +485,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 							)
 						);
 						await bot.reply(
-							processMarkdownLinks(telegramifyMarkdown(foldText(result.response.text()), 'keep')), 'MarkdownV2');
+							foldText(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep'))), 'MarkdownV2');
 					}
 					catch (e) {
 						console.error(e);
