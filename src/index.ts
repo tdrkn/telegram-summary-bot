@@ -144,6 +144,11 @@ function getGenModel(env: Env, systemInstruction: string) {
 	);
 }
 
+function foldText(text: string) 
+{
+	return '**>' + text.split("\n").map((line) => '>'+ line).join("\n") + '||';
+}
+
 // System prompts for different scenarios
 const SYSTEM_PROMPTS = {
 	summarizeChat: `你是一个专业的群聊概括助手。你的任务是用符合群聊风格的语气概括对话内容。
@@ -288,7 +293,7 @@ export default {
 				},
 				body: JSON.stringify({
 					chat_id: group.groupId,
-					text: processMarkdownLinks(telegramifyMarkdown(messageTemplate(result.response.text()), 'keep')),
+					text: processMarkdownLinks(telegramifyMarkdown(messageTemplate(foldText(result.response.text())), 'keep')),
 					parse_mode: "MarkdownV2",
 				}),
 			});
@@ -480,7 +485,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 							)
 						);
 						await bot.reply(
-							processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')), 'MarkdownV2');
+							processMarkdownLinks(telegramifyMarkdown(foldText(result.response.text()), 'keep')), 'MarkdownV2');
 					}
 					catch (e) {
 						console.error(e);
