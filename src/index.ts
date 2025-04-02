@@ -189,7 +189,7 @@ function getCommandVar(str: string, delim: string) {
 }
 
 function messageTemplate(s: string) {
-	return `下面由免费 gemini 2.0 概括群聊信息\n` + s + `\n本开源项目[地址](https://github.com/asukaminato0721/telegram-summary-bot)`;
+	return `下面由免费 gemini 2\\.0 概括群聊信息\n` + s + `\n本开源项目[地址](https://github\\.com/asukaminato0721/telegram-summary-bot)`;
 }
 function getUserName(msg: any) {
 	if (msg?.sender_chat?.title) {
@@ -297,6 +297,9 @@ export default {
 					parse_mode: "MarkdownV2",
 				}),
 			});
+			if (!res?.ok) {
+				console.error("Failed to send reply", res?.statusText, await res?.text());
+			}
 		}
 		// clean up old images
 		if (date.getHours() === 0 && date.getMinutes() < 5) {
@@ -484,8 +487,11 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 								]
 							)
 						);
-						await bot.reply(
-							foldText(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep'))), 'MarkdownV2');
+						let res = await bot.reply(
+							messageTemplate(foldText(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')))), 'MarkdownV2');
+						if (!res?.ok) {
+							console.error("Failed to send reply", res?.statusText, await res?.text());
+						}
 					}
 					catch (e) {
 						console.error(e);
