@@ -293,7 +293,7 @@ export default {
 				},
 				body: JSON.stringify({
 					chat_id: group.groupId,
-					text: foldText(processMarkdownLinks(telegramifyMarkdown(messageTemplate((result.response.text())), 'keep'))),
+					text: messageTemplate(foldText(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')))),
 					parse_mode: "MarkdownV2",
 				}),
 			});
