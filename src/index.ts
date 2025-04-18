@@ -113,7 +113,7 @@ type R = {
 }
 
 function getGenModel(env: Env, systemInstruction: string) {
-	const model = "gemini-2.0-flash";
+	const model = "gemini-2.5-flash-preview-04-17";
 	const gateway_name = "telegram-summary-bot";
 	const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 	const account_id = env.account_id;
@@ -144,7 +144,7 @@ function getGenModel(env: Env, systemInstruction: string) {
 	);
 }
 
-function foldText(text: string) 
+function foldText(text: string)
 {
 	return '**>' + text.split("\n").map((line) => '>'+ line).join("\n") + '||';
 }
@@ -395,7 +395,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 									]
 								),
 								`问题：${getCommandVar(messageText, " ")}`
-							
+
 					]
 					);
 				} catch (e) {
