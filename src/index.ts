@@ -117,6 +117,7 @@ type R = {
 }
 const model = "gemini-2.5-flash-preview-04-17";
 const reasoning_effort = "none";
+const temperature = 0.4;
 function getGenModel(env: Env) {
 	const openai = new OpenAI({
 		apiKey: env.GEMINI_API_KEY,
@@ -281,7 +282,8 @@ export default {
 							]
 						)
 				    }],
-				max_tokens: 4096
+				max_tokens: 4096,
+				temperature
 			})
 			if ([-1001687785734].includes(parseInt(group.groupId as string))) {
 				// todo: use cloudflare r2 to store skip list
@@ -414,7 +416,8 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 								content: `问题：${getCommandVar(messageText, " ")}`
 							}
 						],
-						max_tokens: 4096
+						max_tokens: 4096,
+						temperature
 					});
 				} catch (e) {
 					console.error(e);
@@ -513,7 +516,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 									}
 								],
 								max_tokens: 4096,
-								
+								temperature
 							})
 							
 							
