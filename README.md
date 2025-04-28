@@ -6,7 +6,7 @@
 
 Feel scared when seeing 2000+ unread in groups? Now you can read them by LLM!
 
-Use d1, cf worker, ai gateway, gemini-2.0-flash.
+Use d1, cf worker, ai gateway, gemini-2.5-flash.
 
 ## NOTICE
 
@@ -17,8 +17,6 @@ Due to current usage exceeded maximum DB size 500M `D1_ERROR: Exceeded maximum D
 bot: <https://github.com/codebam/cf-workers-telegram-bot>
 
 d1: <https://developers.cloudflare.com/d1/get-started/>
-
-ai gateway: <https://developers.cloudflare.com/ai-gateway/>
 
 check wiki
 
@@ -53,9 +51,7 @@ d1: telegram bot can't read info in the history, only newly sent info, so use da
 
 cf worker: so no more offline.(I hope so) [pricing](https://developers.cloudflare.com/workers/platform/pricing/#workers)
 
-gemini-2.0-flash: free for limited usage and huge context
-
-For openAI or others,use the `getGenModel` from `openai.ts`, fill in the keys, it returns `Promise<string>` so remember to `await`
+gemini-2.5-flash: free for limited usage and huge context
 
 ---
 

@@ -1,5 +1,6 @@
 import TelegramBot, { TelegramApi } from '@codebam/cf-workers-telegram-bot';
-import { GenerationConfig, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory, SchemaType } from '@google/generative-ai';
+import OpenAI from "openai";
+
 import telegramifyMarkdown from "telegramify-markdown"
 //@ts-ignore
 import { Buffer } from 'node:buffer';
@@ -7,14 +8,17 @@ import { isJPEGBase64 } from './isJpeg';
 import { extractAllOGInfo } from "./og"
 function dispatchContent(content: string) {
 	if (content.startsWith("data:image/jpeg;base64,")) {
-		return {
-			inlineData: {
-				data: content.slice("data:image/jpeg;base64,".length),
-				mimeType: "image/jpeg",
+		return ({
+			"type": "image_url",
+			"image_url": {
+				"url": content
 			},
-		}
+		})
 	}
-	return content;
+	return ({
+		"type": "text",
+		"text": content,
+	});
 }
 
 function getMessageLink(r: { groupId: string, messageId: number }) {
@@ -33,7 +37,7 @@ function escapeMarkdownV2(text: string) {
 	const escapedChars = reservedChars.map(char => '\\' + char).join('');
 	const regex = new RegExp(`([${escapedChars}])`, 'g');
 	return text.replace(regex, '\\$1');
-  }
+}
 
 /**
  * 将数字转换为上标数字
@@ -111,42 +115,20 @@ type R = {
 	messageId: number;
 	timeStamp: number;
 }
-
-function getGenModel(env: Env, systemInstruction: string) {
-	const model = "gemini-2.5-flash-preview-04-17";
-	const gateway_name = "telegram-summary-bot";
-	const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+const model = "gemini-2.5-flash-preview-04-17";
+const reasoning_effort = "none";
+function getGenModel(env: Env) {
+	const openai = new OpenAI({
+		apiKey: env.GEMINI_API_KEY,
+		baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+		timeout: 999999999999,
+	});
 	const account_id = env.account_id;
-	// https://www.reddit.com/r/Bard/comments/1i14ko9/quite_literally_everything_is_getting_censored/
-	const safetySettings = [
-		{
-			category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-			threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-		},
-		{
-			category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-			threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-		},
-		{
-			category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-			threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-		},
-		{
-			category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-			threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-		},
-	];
-	const generationConfig = {
-		maxOutputTokens: 4096,
-	};
-	return genAI.getGenerativeModel(
-		{ model, safetySettings, generationConfig, systemInstruction }, { baseUrl: `https://gateway.ai.cloudflare.com/v1/${account_id}/${gateway_name}/google-ai-studio`, timeout: 99999999999 }
-	);
+	return openai;
 }
 
-function foldText(text: string)
-{
-	return '**>' + text.split("\n").map((line) => '>'+ line).join("\n") + '||';
+function foldText(text: string) {
+	return '**>' + text.split("\n").map((line) => '>' + line).join("\n") + '||';
 }
 
 // System prompts for different scenarios
@@ -189,7 +171,16 @@ function getCommandVar(str: string, delim: string) {
 }
 
 function messageTemplate(s: string) {
-	return `下面由免费 gemini 2\\.0 概括群聊信息\n` + s + `\n本开源项目[地址](https://github\\.com/asukaminato0721/telegram-summary-bot)`;
+	return `下面由免费 gemini 2\\.5 flash 概括群聊信息\n` + s + `\n本开源项目[地址](https://github\\.com/asukaminato0721/telegram-summary-bot)`;
+}
+/**
+ * 
+ * @param text 
+ * @description I dont know why, but llm keep output tme.cat, so we need to fix it
+ * @returns 
+ */
+function fixLink(text: string) {
+	return text.replace(/tme\.cat/g, "t.me/c").replace(/\/c\/c/g, "/c");
 }
 function getUserName(msg: any) {
 	if (msg?.sender_chat?.title) {
@@ -267,18 +258,31 @@ export default {
 			console.debug(`Processing group ${id + 1}/${groups.length}: ${group.groupId}`);
 			const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE groupId=? AND timeStamp >= ? ORDER BY timeStamp ASC')
 				.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
-				.all();
+				.all()
 
-			const result = await getGenModel(env, SYSTEM_PROMPTS.summarizeChat)
-			.startChat()
-			.sendMessage(
-				results.flatMap(
-					(r: any) => [
-						`====================`,
-						`${r.userName}:`, dispatchContent(r.content), getMessageLink(r),
-					]
-				)
-			);
+			//@ts-ignore
+			const result = await getGenModel(env).chat.completions.create({
+				model,
+				reasoning_effort,
+				messages: [
+					{
+						"role": "system",
+						content: SYSTEM_PROMPTS.summarizeChat,
+				    },
+				    {
+						"role": "user",
+						//@ts-ignore
+						content: results.flatMap(
+							(r: any) => [
+								dispatchContent(`====================`),
+								dispatchContent(`${r.userName}:`),
+								dispatchContent(r.content),
+								dispatchContent(getMessageLink(r)),
+							]
+						)
+				    }],
+				max_tokens: 4096
+			})
 			if ([-1001687785734].includes(parseInt(group.groupId as string))) {
 				// todo: use cloudflare r2 to store skip list
 				continue;
@@ -293,7 +297,9 @@ export default {
 				},
 				body: JSON.stringify({
 					chat_id: group.groupId,
-					text: messageTemplate(foldText(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')))),
+					text: messageTemplate(foldText(
+						fixLink(
+						processMarkdownLinks(telegramifyMarkdown(result.choices[0].message.content || "", 'keep'))))),
 					parse_mode: "MarkdownV2",
 				}),
 			});
@@ -381,34 +387,42 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					.all();
 				let result;
 				try {
-					result = await getGenModel(env, SYSTEM_PROMPTS.answerQuestion)
-					.startChat()
-					.sendMessage(
-					 [
-								...results.flatMap(
+					result = await getGenModel(env)
+					// @ts-ignore
+					.chat.completions.create({
+						model,
+						reasoning_effort,
+						messages: [
+							{
+								"role": "system",
+								content: SYSTEM_PROMPTS.answerQuestion,
+							},
+							{
+								"role": "user",
+								//@ts-ignore
+								content: results.flatMap(
 									(r: any) => [
-										`====================`,
-										`${r.userName as string}: `,
-										dispatchContent(r.content as string),
-										getSendTime(r),
-										getMessageLink(r)
+										dispatchContent(`====================`),
+										dispatchContent(`${r.userName}:`),
+										dispatchContent(r.content),
+										dispatchContent(getMessageLink(r)),
 									]
-								),
-								`问题：${getCommandVar(messageText, " ")}`
-
-					]
-					);
+								)
+							},
+							{
+								"role": "user",
+								content: `问题：${getCommandVar(messageText, " ")}`
+							}
+						],
+						max_tokens: 4096
+					});
 				} catch (e) {
 					console.error(e);
 					return new Response('ok');
 				}
 				let response_text: string;
-				if (result.response.promptFeedback?.blockReason) {
-					response_text = "无法回答, 理由" + result.response.promptFeedback.blockReason;
-				}
-				else {
-					response_text = processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep'));
-				}
+				response_text = processMarkdownLinks(telegramifyMarkdown(result.choices[0].message.content || "", 'keep'));
+				
 				res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
 					"chat_id": userId,
 					"parse_mode": "MarkdownV2",
@@ -475,20 +489,38 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				}
 				if (results.length > 0) {
 					try {
-						const result = await getGenModel(env, SYSTEM_PROMPTS.summarizeChat)
-						.startChat()
-						.sendMessage(
-							results.flatMap(
-								(r: any) => [
-									"====================",
-									`${r.userName}:`,
-									dispatchContent(r.content),
-									getMessageLink(r)
-								]
-							)
-						);
+						//@ts-ignore
+						const result = await getGenModel(env).chat.completions.create(
+							{
+								model,
+								reasoning_effort,
+								messages: [
+									{
+										"role": "system",
+										content: SYSTEM_PROMPTS.summarizeChat,
+									},
+									{
+										"role": "user",
+										//@ts-ignore
+										content: results.flatMap(
+											(r: any) => [
+												dispatchContent(`====================`),
+												dispatchContent(`${r.userName}:`),
+												dispatchContent(r.content),
+												dispatchContent(getMessageLink(r)),
+											]
+										)
+									}
+								],
+								max_tokens: 4096,
+								
+							})
+							
+							
 						let res = await bot.reply(
-							messageTemplate(foldText(processMarkdownLinks(telegramifyMarkdown(result.response.text(), 'keep')))), 'MarkdownV2');
+							messageTemplate(foldText(
+								fixLink(
+								    processMarkdownLinks(telegramifyMarkdown(result.choices[0].message.content || "", 'keep'))))), 'MarkdownV2');
 						if (!res?.ok) {
 							console.error("Failed to send reply", res?.statusText, await res?.text());
 						}
