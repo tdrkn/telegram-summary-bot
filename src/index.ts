@@ -115,7 +115,7 @@ type R = {
 	messageId: number;
 	timeStamp: number;
 }
-const model = "gemini-2.5-flash-preview-04-17";
+const model = "gemini-2.0-flash";
 const reasoning_effort = "none";
 const temperature = 0.4;
 function getGenModel(env: Env) {
@@ -172,7 +172,7 @@ function getCommandVar(str: string, delim: string) {
 }
 
 function messageTemplate(s: string) {
-	return `下面由免费 gemini 2\\.5 flash 概括群聊信息\n` + s + `\n本开源项目[地址](https://github\\.com/asukaminato0721/telegram-summary-bot)`;
+	return `下面由免费 ${escapeMarkdownV2(model)} 概括群聊信息\n` + s + `\n本开源项目[地址](https://github\\.com/asukaminato0721/telegram-summary-bot)`;
 }
 /**
  * 
@@ -496,7 +496,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						const result = await getGenModel(env).chat.completions.create(
 							{
 								model,
-								reasoning_effort,
+								// reasoning_effort,
 								messages: [
 									{
 										"role": "system",
