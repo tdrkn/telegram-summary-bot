@@ -6,7 +6,7 @@ import telegramifyMarkdown from "telegramify-markdown"
 import { Buffer } from 'node:buffer';
 import { isJPEGBase64 } from './isJpeg';
 import { extractAllOGInfo } from "./og"
-function dispatchContent(content: string): { type: "text", text: string } | { type: "image_url", image_url: { url: string } }  {
+function dispatchContent(content: string): { type: "text", text: string } | { type: "image_url", image_url: { url: string } } {
 	if (content.startsWith("data:image/jpeg;base64,")) {
 		return ({
 			"type": "image_url",
@@ -261,17 +261,15 @@ export default {
 				.bind(group.groupId, Date.now() - 24 * 60 * 60 * 1000)
 				.all()
 
-			//@ts-ignore
 			const result = await getGenModel(env).chat.completions.create({
 				model,
 				messages: [
 					{
 						"role": "system",
 						content: SYSTEM_PROMPTS.summarizeChat,
-				    },
-				    {
+					},
+					{
 						"role": "user",
-						//@ts-ignore
 						content: results.flatMap(
 							(r: any) => [
 								dispatchContent(`====================`),
@@ -280,7 +278,7 @@ export default {
 								dispatchContent(getMessageLink(r)),
 							]
 						)
-				    }],
+					}],
 				max_tokens: 4096,
 				temperature
 			})
@@ -300,7 +298,7 @@ export default {
 					chat_id: group.groupId,
 					text: messageTemplate(foldText(
 						fixLink(
-						processMarkdownLinks(telegramifyMarkdown(result.choices[0].message.content || "", 'keep'))))),
+							processMarkdownLinks(telegramifyMarkdown(result.choices[0].message.content || "", 'keep'))))),
 					parse_mode: "MarkdownV2",
 				}),
 			});
@@ -389,41 +387,39 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				let result;
 				try {
 					result = await getGenModel(env)
-					// @ts-ignore
-					.chat.completions.create({
-						model,
-						messages: [
-							{
-								"role": "system",
-								content: SYSTEM_PROMPTS.answerQuestion,
-							},
-							{
-								"role": "user",
-								//@ts-ignore
-								content: results.flatMap(
-									(r: any) => [
-										dispatchContent(`====================`),
-										dispatchContent(`${r.userName}:`),
-										dispatchContent(r.content),
-										dispatchContent(getMessageLink(r)),
-									]
-								)
-							},
-							{
-								"role": "user",
-								content: `问题：${getCommandVar(messageText, " ")}`
-							}
-						],
-						max_tokens: 4096,
-						temperature
-					});
+						.chat.completions.create({
+							model,
+							messages: [
+								{
+									"role": "system",
+									content: SYSTEM_PROMPTS.answerQuestion,
+								},
+								{
+									"role": "user",
+									content: results.flatMap(
+										(r: any) => [
+											dispatchContent(`====================`),
+											dispatchContent(`${r.userName}:`),
+											dispatchContent(r.content),
+											dispatchContent(getMessageLink(r)),
+										]
+									)
+								},
+								{
+									"role": "user",
+									content: `问题：${getCommandVar(messageText, " ")}`
+								}
+							],
+							max_tokens: 4096,
+							temperature
+						});
 				} catch (e) {
 					console.error(e);
 					return new Response('ok');
 				}
 				let response_text: string;
 				response_text = processMarkdownLinks(telegramifyMarkdown(result.choices[0].message.content || "", 'keep'));
-				
+
 				res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
 					"chat_id": userId,
 					"parse_mode": "MarkdownV2",
@@ -490,7 +486,6 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				}
 				if (results.length > 0) {
 					try {
-						//@ts-ignore
 						const result = await getGenModel(env).chat.completions.create(
 							{
 								model,
@@ -502,7 +497,6 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 									},
 									{
 										"role": "user",
-										//@ts-ignore
 										content: results.flatMap(
 											(r: any) => [
 												dispatchContent(`====================`),
@@ -516,12 +510,12 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 								max_tokens: 4096,
 								temperature
 							})
-							
-							
+
+
 						let res = await bot.reply(
 							messageTemplate(foldText(
 								fixLink(
-								    processMarkdownLinks(telegramifyMarkdown(result.choices[0].message.content || "", 'keep'))))), 'MarkdownV2');
+									processMarkdownLinks(telegramifyMarkdown(result.choices[0].message.content || "", 'keep'))))), 'MarkdownV2');
 						if (!res?.ok) {
 							console.error("Failed to send reply", res?.statusText, await res?.text());
 						}
