@@ -6,7 +6,7 @@ import telegramifyMarkdown from "telegramify-markdown"
 import { Buffer } from 'node:buffer';
 import { isJPEGBase64 } from './isJpeg';
 import { extractAllOGInfo } from "./og"
-function dispatchContent(content: string) {
+function dispatchContent(content: string): { type: "text", text: string } | { type: "image_url", image_url: { url: string } }  {
 	if (content.startsWith("data:image/jpeg;base64,")) {
 		return ({
 			"type": "image_url",
@@ -264,7 +264,6 @@ export default {
 			//@ts-ignore
 			const result = await getGenModel(env).chat.completions.create({
 				model,
-				reasoning_effort,
 				messages: [
 					{
 						"role": "system",
@@ -393,7 +392,6 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					// @ts-ignore
 					.chat.completions.create({
 						model,
-						reasoning_effort,
 						messages: [
 							{
 								"role": "system",
