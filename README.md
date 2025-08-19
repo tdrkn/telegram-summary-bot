@@ -1,4 +1,4 @@
-# telegram group summary bot
+# telegram group summary bot (RUS)
 
 ![image_fx_](https://github.com/user-attachments/assets/d9924ced-5310-4edc-9073-bdcc1df1dd6d)
 
