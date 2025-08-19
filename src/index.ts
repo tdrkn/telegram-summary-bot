@@ -26,23 +26,23 @@ function getMessageLink(r: { groupId: string, messageId: number }) {
 }
 
 function getSendTime(r: R) {
-	return new Date(r.timeStamp).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
+	return new Date(r.timeStamp).toLocaleString("ru-RU", { timeZone: "Asia/Shanghai" });
 }
 
 function escapeMarkdownV2(text: string) {
-	// 注意：反斜杠 \ 本身也需要转义，所以正则表达式中是 \\\\
-	// 或者直接在字符串中使用 \
+	// Примечание: обратный слеш \ сам по себе тоже нужно экранировать, поэтому в регулярном выражении \\\\
+	// или использовать непосредственно \ в строке
 	const reservedChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
-	// 正则表达式需要转义特殊字符
+	// Регулярное выражение требует экранирования специальных символов
 	const escapedChars = reservedChars.map(char => '\\' + char).join('');
 	const regex = new RegExp(`([${escapedChars}])`, 'g');
 	return text.replace(regex, '\\$1');
 }
 
 /**
- * 将数字转换为上标数字
- * @param {number} num - 要转换的数字
- * @returns {string} 上标形式的数字
+ * Преобразование числа в верхний индекс
+ * @param {number} num - число для преобразования
+ * @returns {string} число в виде верхнего индекса
  */
 export function toSuperscript(num: number) {
 	const superscripts = {
@@ -65,15 +65,15 @@ export function toSuperscript(num: number) {
 		.join('');
 }
 /**
- * 处理 Markdown 文本中的重复链接，将其转换为顺序编号的格式
- * @param {string} text - 输入的 Markdown 文本
- * @param {Object} options - 配置选项
- * @param {string} options.prefix - 链接文本的前缀，默认为"链接"
- * @param {boolean} options.useEnglish - 是否使用英文(link1)而不是中文(链接1)，默认为 false
- * @returns {string} 处理后的 Markdown 文本
+ * Обработка повторяющихся ссылок в Markdown тексте, преобразование их в последовательно пронумерованный формат
+ * @param {string} text - входной Markdown текст
+ * @param {Object} options - параметры конфигурации
+ * @param {string} options.prefix - префикс для текста ссылки, по умолчанию "ссылка"
+ * @param {boolean} options.useEnglish - использовать ли английский (link1) вместо русского (ссылка1), по умолчанию false
+ * @returns {string} обработанный Markdown текст
  */
 export function processMarkdownLinks(text: string, options: { prefix: string, useEnglish: boolean } = {
-	prefix: '引用',
+	prefix: 'ссылка',
 	useEnglish: false
 }) {
 	const {
@@ -81,29 +81,29 @@ export function processMarkdownLinks(text: string, options: { prefix: string, us
 		useEnglish
 	} = options;
 
-	// 用于存储已经出现过的链接
+	// используется для хранения уже встречавшихся ссылок
 	const linkMap = new Map();
 	let linkCounter = 1;
 
-	// 匹配 markdown 链接的正则表达式
+	// регулярное выражение для поиска markdown ссылок
 	const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
 
 	return text.replace(linkPattern, (match, displayText, url) => {
-		// 只处理显示文本和 URL 完全相同的情况
+		// обрабатывать только случаи, когда отображаемый текст и URL полностью совпадают
 		if (displayText !== url) {
-			return match; // 保持原样
+			return match; // оставить как есть
 		}
 
-		// 如果这个 URL 已经出现过，使用已存在的编号
+		// если этот URL уже встречался, использовать существующий номер
 		if (!linkMap.has(url)) {
 			linkMap.set(url, linkCounter++);
 		}
 		const linkNumber = linkMap.get(url);
 
-		// 根据选项决定使用中文还是英文格式
+		// определить использовать китайский или английский формат на основе настроек
 		const linkPrefix = useEnglish ? 'link' : prefix;
 
-		// 返回新的格式 [链接1](原URL) 或 [link1](原URL)
+		// вернуть новый формат [ссылка1](исходный URL) или [link1](исходный URL)
 		return `[${linkPrefix}${toSuperscript(linkNumber)}](${url})`;
 	});
 }
@@ -134,37 +134,37 @@ function foldText(text: string) {
 
 // System prompts for different scenarios
 const SYSTEM_PROMPTS = {
-	summarizeChat: `你是一个专业的群聊概括助手。你的任务是用符合群聊风格的语气概括对话内容。
-对话将按以下格式提供：
+	summarizeChat: `Вы - профессиональный помощник для обобщения групповых чатов. Ваша задача - резюмировать содержание разговора в тоне, соответствующем стилю группового чата.
+Диалог будет предоставлен в следующем формате:
 ====================
-用户名:
-发言内容
-相应链接
-====================
-
-请遵循以下指南：
-1. 如果对话包含多个主题，请分条概括
-2. 如果对话中提到图片，请在概括中包含相关内容描述
-3. 在回答中用markdown格式引用原对话的链接
-4. 链接格式应为：[引用1](链接本体)、[关键字1](链接本体)等
-5. 概括要简洁明了，捕捉对话的主要内容和情绪
-6. 概括的开头使用"本日群聊总结如下："`,
-
-	answerQuestion: `你是一个群聊智能助手。你的任务是基于提供的群聊记录回答用户的问题。
-群聊记录将按以下格式提供：
-====================
-用户名:
-发言内容
-相应链接
+Имя пользователя:
+Сообщение
+Соответствующая ссылка
 ====================
 
-请遵循以下指南：
-1. 用符合群聊风格的语气回答问题
-2. 在回答中引用相关的原始消息作为依据
-3. 使用markdown格式引用原对话，格式为：[引用1](链接本体)、[关键字1](链接本体)
-4. 在链接两侧添加空格
-5. 如果找不到相关信息，请诚实说明
-6. 回答应该简洁但内容完整`
+Пожалуйста, следуйте этим рекомендациям:
+1. Если разговор содержит несколько тем, резюмируйте их по пунктам
+2. Если в разговоре упоминаются изображения, включите описание соответствующего содержания в резюме
+3. В ответе используйте markdown формат для ссылок на оригинальные диалоги
+4. Формат ссылок должен быть: [ссылка1](тело ссылки), [ключевое слово1](тело ссылки) и т.д.
+5. Резюме должно быть кратким и ясным, захватывая основное содержание и настроение разговора
+6. Начинайте резюме с "Сводка группового чата на сегодня:"`,
+
+	answerQuestion: `Вы - умный помощник группового чата. Ваша задача - отвечать на вопросы пользователей на основе предоставленных записей группового чата.
+Записи группового чата будут предоставлены в следующем формате:
+====================
+Имя пользователя:
+Сообщение
+Соответствующая ссылка
+====================
+
+Пожалуйста, следуйте этим рекомендациям:
+1. Отвечайте в тоне, соответствующем стилю группового чата
+2. В ответе ссылайтесь на соответствующие оригинальные сообщения в качестве основания
+3. Используйте markdown формат для ссылок на оригинальные диалоги: [ссылка1](тело ссылки), [ключевое слово1](тело ссылки)
+4. Добавляйте пробелы по обеим сторонам ссылок
+5. Если соответствующая информация не найдена, честно сообщите об этом
+6. Ответ должен быть кратким, но полным по содержанию`
 };
 
 function getCommandVar(str: string, delim: string) {
@@ -172,7 +172,7 @@ function getCommandVar(str: string, delim: string) {
 }
 
 function messageTemplate(s: string) {
-	return `下面由免费 ${escapeMarkdownV2(model)} 概括群聊信息\n` + s + `\n本开源项目[地址](https://github\\.com/asukaminato0721/telegram-summary-bot)`;
+	return `Ниже представлена сводка от бесплатного ${escapeMarkdownV2(model)}\n` + s + `\n[Адрес открытого проекта](https://github\\.com/asukaminato0721/telegram-summary-bot)`;
 }
 /**
  * 
@@ -320,7 +320,7 @@ export default {
 	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
 		await new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN)
 			.on('status', async (ctx) => {
-				const res = (await ctx.reply('我家还蛮大的'))!;
+				const res = (await ctx.reply('Мой дом довольно большой'))!;
 				if (!res.ok) {
 					console.error(`Error sending message:`, res);
 				}
@@ -330,7 +330,7 @@ export default {
 				const groupId = ctx.update.message!.chat.id;
 				const messageText = ctx.update.message!.text || "";
 				if (!messageText.split(" ")[1]) {
-					const res = (await ctx.reply('请输入要查询的关键词'))!;
+					const res = (await ctx.reply('Пожалуйста, введите ключевое слово для поиска'))!;
 					if (!res.ok) {
 						console.error(`Error sending message:`, res);
 					}
@@ -344,7 +344,7 @@ export default {
 					.bind(groupId, `*${messageText.split(" ")[1]}*`)
 					.all();
 				const res = (await ctx.reply(
-					escapeMarkdownV2(`查询结果:
+					escapeMarkdownV2(`Результаты поиска:
 ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "" : `[link](https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId})`}`).join('\n')}`), "MarkdownV2"))!;
 				if (!res.ok) {
 					console.error(`Error sending message:`, res.status, res.statusText, await res.text());
@@ -356,7 +356,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				const userId = ctx.update.message!.from!.id;
 				const messageText = ctx.update.message!.text || "";
 				if (!messageText.split(" ")[1]) {
-					const res = (await ctx.reply('请输入要问的问题'))!;
+					const res = (await ctx.reply('Пожалуйста, введите вопрос'))!;
 					if (!res.ok) {
 						console.error(`Error sending message:`, res);
 					}
@@ -365,11 +365,11 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				let res = await ctx.api.sendMessage(ctx.bot.api.toString(), {
 					"chat_id": userId,
 					"parse_mode": "MarkdownV2",
-					"text": "bot 已经收到你的问题, 请稍等",
+					"text": "Бот получил ваш вопрос, пожалуйста, подождите",
 					reply_to_message_id: -1,
 				});
 				if (!res.ok) {
-					await ctx.reply(`请开启和 bot 的私聊, 不然无法接收消息`);
+					await ctx.reply(`Пожалуйста, включите приватный чат с ботом, иначе вы не сможете получать сообщения`);
 					return new Response('ok');
 				}
 				const { results } = await env.DB.prepare(`
@@ -407,7 +407,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 								},
 								{
 									"role": "user",
-									content: `问题：${getCommandVar(messageText, " ")}`
+									content: `Вопрос: ${getCommandVar(messageText, " ")}`
 								}
 							],
 							max_tokens: 4096,
@@ -429,17 +429,17 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 				if (!res.ok) {
 					let reason = (await res.json() as any)?.promptFeedback?.blockReason;
 					if (reason) {
-						await ctx.reply(`无法回答, 理由 ${reason}`);
+						await ctx.reply(`Невозможно ответить, причина: ${reason}`);
 						return new Response('ok');
 					}
-					await ctx.reply(`发送失败`);
+					await ctx.reply(`Ошибка отправки`);
 				}
 				return new Response('ok');
 			})
 			.on("summary", async (bot) => {
 				const groupId = bot.update.message!.chat.id;
 				if (bot.update.message!.text!.split(" ").length === 1) {
-					await bot.reply('请输入要查询的时间范围/消息数量, 如 /summary 114h 或 /summary 514');
+					await bot.reply('Пожалуйста, введите временной диапазон/количество сообщений для запроса, например /summary 114h или /summary 514');
 					return new Response('ok');
 				}
 				const summary = bot.update.message!.text!.split(" ")[1];
@@ -457,7 +457,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 					}
 				}
 				catch (e: any) {
-					await bot.reply('请输入要查询的时间范围/消息数量, 如 /summary 114h 或 /summary 514  ' + e.message);
+					await bot.reply('Пожалуйста, введите временной диапазон/количество сообщений для запроса, например /summary 114h или /summary 514  ' + e.message);
 					return new Response('ok');
 				}
 				if (summary.endsWith("h")) {
@@ -529,7 +529,7 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 			})
 			.on(':message', async (bot) => {
 				if (!bot.update.message!.chat.type.includes('group')) {
-					await bot.reply('I am a bot, please add me to a group to use me.');
+					await bot.reply('Я бот, пожалуйста, добавьте меня в группу, чтобы использовать.');
 					return new Response('ok');
 				}
 
@@ -541,10 +541,10 @@ ${results.map((r: any) => `${r.userName}: ${r.content} ${r.messageId == null ? "
 						const fwd = msg.forward_from?.last_name;
 						const replyTo = msg.reply_to_message?.message_id;
 						if (fwd) {
-							content = `转发自 ${fwd}: ${content}`;
+							content = `Переслано от ${fwd}: ${content}`;
 						}
 						if (replyTo) {
-							content = `回复 ${getMessageLink({ groupId: groupId.toString(), messageId: replyTo })}: ${content}`;
+							content = `Ответ на ${getMessageLink({ groupId: groupId.toString(), messageId: replyTo })}: ${content}`;
 						}
 						if (content.startsWith("http") && !content.includes(" ")) {
 							content = await extractAllOGInfo(content);
