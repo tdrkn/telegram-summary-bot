@@ -6,7 +6,8 @@ import telegramifyMarkdown from "telegramify-markdown"
 import { Buffer } from 'node:buffer';
 import { isJPEGBase64 } from './isJpeg';
 import { extractAllOGInfo } from "./og"
-function dispatchContent(content: string): { type: "text", text: string } | { type: "image_url", image_url: { url: string } } {
+
+export function dispatchContent(content: string): { type: "text", text: string } | { type: "image_url", image_url: { url: string } } {
 	if (content.startsWith("data:image/jpeg;base64,")) {
 		return ({
 			"type": "image_url",
@@ -21,15 +22,15 @@ function dispatchContent(content: string): { type: "text", text: string } | { ty
 	});
 }
 
-function getMessageLink(r: { groupId: string, messageId: number }) {
+export function getMessageLink(r: { groupId: string, messageId: number }) {
 	return `https://t.me/c/${parseInt(r.groupId.slice(2))}/${r.messageId}`;
 }
 
-function getSendTime(r: R) {
+export function getSendTime(r: R) {
 	return new Date(r.timeStamp).toLocaleString("ru-RU", { timeZone: "Asia/Shanghai" });
 }
 
-function escapeMarkdownV2(text: string) {
+export function escapeMarkdownV2(text: string) {
 	// Примечание: обратный слеш \ сам по себе тоже нужно экранировать, поэтому в регулярном выражении \\\\
 	// или использовать непосредственно \ в строке
 	const reservedChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
@@ -115,10 +116,10 @@ type R = {
 	messageId: number;
 	timeStamp: number;
 }
-const model = "gemini-2.0-flash";
+export const model = "gemini-2.0-flash";
 const reasoning_effort = "none";
-const temperature = 0.4;
-function getGenModel(env: Env) {
+export const temperature = 0.4;
+export function getGenModel(env: Env) {
 	const openai = new OpenAI({
 		apiKey: env.GEMINI_API_KEY,
 		baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
@@ -128,12 +129,12 @@ function getGenModel(env: Env) {
 	return openai;
 }
 
-function foldText(text: string) {
+export function foldText(text: string) {
 	return '**>' + text.split("\n").map((line) => '>' + line).join("\n") + '||';
 }
 
 // System prompts for different scenarios
-const SYSTEM_PROMPTS = {
+export const SYSTEM_PROMPTS = {
 	summarizeChat: `Вы - профессиональный помощник для обобщения групповых чатов. Ваша задача - резюмировать содержание разговора в тоне, соответствующем стилю группового чата.
 Диалог будет предоставлен в следующем формате:
 ====================
@@ -167,11 +168,11 @@ const SYSTEM_PROMPTS = {
 6. Ответ должен быть кратким, но полным по содержанию`
 };
 
-function getCommandVar(str: string, delim: string) {
+export function getCommandVar(str: string, delim: string) {
 	return str.slice(str.indexOf(delim) + delim.length);
 }
 
-function messageTemplate(s: string) {
+export function messageTemplate(s: string) {
 	return `Ниже представлена сводка от бесплатного ${escapeMarkdownV2(model)}\n` + s + `\n[Адрес открытого проекта](https://github\\.com/asukaminato0721/telegram-summary-bot)`;
 }
 /**
@@ -180,10 +181,10 @@ function messageTemplate(s: string) {
  * @description I dont know why, but llm keep output tme.cat, so we need to fix it
  * @returns 
  */
-function fixLink(text: string) {
+export function fixLink(text: string) {
 	return text.replace(/tme\.cat/g, "t.me/c").replace(/\/c\/c/g, "/c");
 }
-function getUserName(msg: any) {
+export function getUserName(msg: any) {
 	if (msg?.sender_chat?.title) {
 		return msg.sender_chat.title as string;
 	}

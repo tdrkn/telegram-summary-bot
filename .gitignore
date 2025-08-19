@@ -170,3 +170,17 @@ dist
 
 .dev.vars
 .wrangler/
+
+# Docker & Local Development
+
+# SQLite database files
+*.sqlite
+*.sqlite3
+data/
+
+# Build output
+dist/
+
+# Local environment files
+.env
+.env.local

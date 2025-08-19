@@ -8,17 +8,82 @@ Feel scared when seeing 2000+ unread in groups? Now you can read them by LLM!
 
 Use d1, cf worker, ai gateway, gemini-2.5-flash.
 
+**New**: Now supports Docker deployment for local/self-hosted installations!
+
 ## NOTICE
 
 Due to current usage exceeded maximum DB size 500M `D1_ERROR: Exceeded maximum DB size`, please deploy your own bot. And you can keep a much longer log. I have disabled this bot to be add to new group.
 
 ## Setup
 
+### Cloudflare Workers (Original)
+
 bot: <https://github.com/codebam/cf-workers-telegram-bot>
 
 d1: <https://developers.cloudflare.com/d1/get-started/>
 
 check wiki
+
+### Docker Deployment (New)
+
+1. **Create a Telegram Bot**:
+   - Message [@BotFather](https://t.me/botfather) on Telegram
+   - Run `/newbot` and follow instructions
+   - Save the bot token
+
+2. **Get Gemini API Key**:
+   - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - Create a new API key
+   - Save the API key
+
+3. **Clone and Setup**:
+   ```bash
+   git clone https://github.com/tdrkn/telegram-summary-bot.git
+   cd telegram-summary-bot
+   
+   # Copy environment file
+   cp .env.example .env
+   
+   # Edit .env file with your tokens
+   nano .env
+   ```
+
+4. **Configure Environment**:
+   Edit `.env` file:
+   ```env
+   SECRET_TELEGRAM_API_TOKEN=your_telegram_bot_token_here
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ACCOUNT_ID=local-deployment
+   DATABASE_PATH=./data/messages.sqlite
+   PORT=3000
+   WEBHOOK_URL=https://your-domain.com/webhook
+   CRON_SCHEDULE=0 0,1 * * *
+   ```
+
+5. **Deploy with Docker Compose**:
+   ```bash
+   # Build and start the bot
+   docker-compose up -d
+   
+   # Check logs
+   docker-compose logs -f
+   
+   # Stop the bot
+   docker-compose down
+   ```
+
+6. **Set Webhook**:
+   Replace `YOUR_BOT_TOKEN` and `YOUR_DOMAIN` with your values:
+   ```bash
+   curl -X POST "https://api.telegram.org/botYOUR_BOT_TOKEN/setWebhook" \
+        -H "Content-Type: application/json" \
+        -d '{"url": "https://YOUR_DOMAIN/webhook"}'
+   ```
+
+7. **Add Bot to Groups**:
+   - Add your bot to Telegram groups
+   - Give it admin permissions to read messages
+   - The bot will start storing and summarizing messages
 
 ## Usage
 
