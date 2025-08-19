@@ -10,12 +10,13 @@
 		"jsx": "react-jsx",
 
 		/* Specify what module code is generated. */
-		"module": "es2022",
+		"module": "commonjs",
 		/* Specify how TypeScript looks up a file from a given module specifier. */
-		"moduleResolution": "Bundler",
+		"moduleResolution": "node",
 		/* Specify type package names to be included without being referenced in a source file. */
 		"types": [
-			"@cloudflare/workers-types/2023-07-01"
+			"@cloudflare/workers-types/2023-07-01",
+			"node"
 		],
 		/* Enable importing .json files */
 		"resolveJsonModule": true,
@@ -25,13 +26,15 @@
 		/* Enable error reporting in type-checked JavaScript files. */
 		"checkJs": false,
 
-		/* Disable emitting files from a compilation. */
-		"noEmit": true,
+		/* Output directory */
+		"outDir": "./dist",
 
 		/* Ensure that each file can be safely transpiled without relying on other imports. */
 		"isolatedModules": true,
 		/* Allow 'import x from y' when a module doesn't have a default export. */
 		"allowSyntheticDefaultImports": true,
+		/* Enable interoperability between CommonJS and ES6 modules */
+		"esModuleInterop": true,
 		/* Ensure that casing is correct in imports. */
 		"forceConsistentCasingInFileNames": true,
 
@@ -41,6 +44,6 @@
 		/* Skip type checking all .d.ts files. */
 		"skipLibCheck": true
 	},
-	"exclude": ["test"],
+	"exclude": ["test", "dist"],
 	"include": ["worker-configuration.d.ts", "src/**/*.ts"]
 }
